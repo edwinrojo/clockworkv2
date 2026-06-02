@@ -21,7 +21,7 @@ class AuthenticationTest extends TestCase
 
     public function test_users_can_authenticate_using_the_login_screen()
     {
-        $user = User::factory()->create();
+        $user = User::factory()->eventManager()->create();
 
         $response = $this->post(route('login.store'), [
             'email' => $user->email,
@@ -50,6 +50,19 @@ class AuthenticationTest extends TestCase
 
         $response->assertRedirect(route('two-factor.login'));
         $response->assertSessionHas('login.id', $user->id);
+        $this->assertGuest();
+    }
+
+    public function test_employees_cannot_log_in_to_the_admin_dashboard(): void
+    {
+        $employee = User::factory()->employee()->create();
+
+        $response = $this->post(route('login.store'), [
+            'email' => $employee->email,
+            'password' => 'password',
+        ]);
+
+        $response->assertRedirect(route('login', absolute: false));
         $this->assertGuest();
     }
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid } from '@lucide/vue';
+import { Link, usePage } from '@inertiajs/vue3';
+import { BookOpen, Building2, FolderGit2, LayoutGrid, MapPin } from '@lucide/vue';
+import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -15,15 +16,42 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as departmentsIndex } from '@/routes/departments';
+import { index as venuesIndex } from '@/routes/venues';
 import type { NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
+const page = usePage();
+
+const mainNavItems = computed<NavItem[]>(() => [
     {
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
     },
-];
+]);
+
+const organizationNavItems = computed<NavItem[]>(() => {
+    const items: NavItem[] = [];
+    const can = page.props.auth.can;
+
+    if (can.departments.viewAny) {
+        items.push({
+            title: 'Departments',
+            href: departmentsIndex(),
+            icon: Building2,
+        });
+    }
+
+    if (can.venues.viewAny) {
+        items.push({
+            title: 'Venues',
+            href: venuesIndex(),
+            icon: MapPin,
+        });
+    }
+
+    return items;
+});
 
 const footerNavItems: NavItem[] = [
     {
@@ -55,6 +83,11 @@ const footerNavItems: NavItem[] = [
 
         <SidebarContent>
             <NavMain :items="mainNavItems" />
+            <NavMain
+                v-if="organizationNavItems.length > 0"
+                label="Organization"
+                :items="organizationNavItems"
+            />
         </SidebarContent>
 
         <SidebarFooter>

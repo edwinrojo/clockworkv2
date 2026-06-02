@@ -74,6 +74,6 @@ class User extends Authenticatable implements PasskeyUser
 
     public function canAccessAdmin(): bool
     {
-        return $this->role->canAccessAdmin();
+        return $this->role?->canAccessAdmin() ?? false;
     }
 }
