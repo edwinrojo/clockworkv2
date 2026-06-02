@@ -3,6 +3,7 @@
 namespace App\Support\Inertia;
 
 use App\Models\Department;
+use App\Models\Event;
 use App\Models\User;
 use App\Models\Venue;
 
@@ -17,6 +18,7 @@ class AdminPermissions
             return [
                 'departments' => self::emptyAbilities(),
                 'venues' => self::emptyAbilities(),
+                'events' => self::emptyAbilities(),
             ];
         }
 
@@ -28,6 +30,10 @@ class AdminPermissions
             'venues' => [
                 'viewAny' => $user->can('viewAny', Venue::class),
                 'create' => $user->can('create', Venue::class),
+            ],
+            'events' => [
+                'viewAny' => $user->can('viewAny', Event::class),
+                'create' => $user->can('create', Event::class),
             ],
         ];
     }
