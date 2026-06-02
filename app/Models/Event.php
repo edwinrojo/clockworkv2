@@ -1,0 +1,78 @@
+<?php
+
+namespace App\Models;
+
+use App\Enums\DuplicatePolicy;
+use App\Enums\EventStatus;
+use App\Enums\EventType;
+use Database\Factories\EventFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
+
+#[Fillable([
+    'venue_id',
+    'created_by',
+    'title',
+    'description',
+    'type',
+    'status',
+    'starts_at',
+    'ends_at',
+    'check_in_opens_at',
+    'check_in_closes_at',
+    'qr_rotation_seconds',
+    'duplicate_policy',
+    'display_secret',
+])]
+class Event extends Model
+{
+    /** @use HasFactory<EventFactory> */
+    use HasFactory, HasUlids;
+
+    protected static function booted(): void
+    {
+        static::creating(function (Event $event): void {
+            if (blank($event->display_secret)) {
+                $event->display_secret = Str::random(64);
+            }
+        });
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'type' => EventType::class,
+            'status' => EventStatus::class,
+            'duplicate_policy' => DuplicatePolicy::class,
+            'starts_at' => 'datetime',
+            'ends_at' => 'datetime',
+            'check_in_opens_at' => 'datetime',
+            'check_in_closes_at' => 'datetime',
+        ];
+    }
+
+    public function venue(): BelongsTo
+    {
+        return $this->belongsTo(Venue::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function sessions(): HasMany
+    {
+        return $this->hasMany(EventSession::class);
+    }
+
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(Attendance::class);
+    }
+}
