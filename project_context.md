@@ -236,7 +236,7 @@ Modules below are **in scope for this repository**. Flutter is out of scope here
 - Idempotent check-in endpoint (mobile API) — **implemented**
 - Duplicate detection rules per event policy
 - Manual check-in / override by admin with reason (audit) — **implemented** (`events/{event}/attendances`)
-- Late / absent flags based on window rules
+- Late check-in status (`present` vs `late`) via `AttendanceStatusResolver` and `CLOCKWORK_LATE_GRACE_MINUTES` (default 15)
 
 ### 8. Mobile API (Backend for Flutter) — **implemented (Sanctum v1)**
 
@@ -254,20 +254,20 @@ REST JSON API at `/api/v1` (Bearer token; employees only):
 - **Auth:** Laravel Sanctum personal access tokens (`HasApiTokens` on `User`; `personal_access_tokens` uses `ulidMorphs` for ULID users).
 - **Services:** `CheckInService`, `GeofenceValidator` (Haversine radius + polygon).
 - **Error codes:** `CheckInErrorCode` enum (`QR_EXPIRED`, `OUTSIDE_GEOFENCE`, `ALREADY_CHECKED_IN`, `EVENT_NOT_ACTIVE`, `UNAUTHORIZED`, `INVALID_QR`, `ACCOUNT_INACTIVE`).
-- **Not yet:** refresh tokens, password reset via API, rate limiting, device registration.
+- **Rate limiting:** login 10/min, check-in 30/min, other routes 120/min (per user/IP)
+- **API docs:** `docs/API.md`
+- **Not yet:** refresh tokens, password reset via API, device registration.
 
-### 9. Real-Time & Live Operations Dashboard — **basic implemented**
+### 9. Real-Time & Live Operations Dashboard — **implemented**
 
-- `GET /events/{event}/live` — session controls, attendance count, recent check-ins (5s poll)
-- Missing employees roster — not yet
+- `GET /events/{event}/live` — session controls, stats, recent check-ins (5s poll), missing employees roster with department filter
+- Display PIN management on live page
 
-### 10. Reports & Analytics
+### 10. Reports & Analytics — **implemented**
 
-- Per-event attendance summary
-- Per-department breakdown
-- Export CSV/PDF
-- Date range filters, attendance rate trends
-- Optional: integration export format for HR systems
+- `GET /reports` — date-range event list with attendance counts
+- `GET /reports/events/{event}` — summary, department breakdown, attendance rate
+- `GET /reports/export` — CSV export for filtered events
 
 ### 11. Notifications (Optional Phases)
 
@@ -326,7 +326,7 @@ Document and version:
 - [ ] `DuplicatePolicy::PerCalendarDay` enforcement logic (column exists; service not built)
 - [ ] Offline check-in support (likely no for v1)
 - [x] Sanctum for mobile API (Passport not used)
-- [ ] Optional staff PIN on QR display page (in addition to `display_secret`)
+- [x] Optional staff PIN on QR display page (`display_pin_hash`, unlock at `/display/{secret}/unlock`)
 
 ---
 

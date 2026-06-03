@@ -28,6 +28,7 @@ return new class extends Migration
             $table->unsignedSmallInteger('qr_rotation_seconds')->default(60);
             $table->string('duplicate_policy')->default(DuplicatePolicy::PerEvent->value);
             $table->string('display_secret', 64)->unique();
+            $table->string('display_pin_hash')->nullable();
             $table->timestamps();
 
             $table->index(['status', 'starts_at']);

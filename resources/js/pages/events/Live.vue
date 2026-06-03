@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { Form, Head, Link, router } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import EventDisplayPinController from '@/actions/App/Http/Controllers/EventDisplayPinController';
 import EventSessionController from '@/actions/App/Http/Controllers/EventSessionController';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import EventStatusBadge from '@/components/admin/EventStatusBadge.vue';
+import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
-import { attendances, edit, index } from '@/routes/events';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { attendances, edit, index, live } from '@/routes/events';
 import type { EventLiveAttendance, EventLiveSession } from '@/types/admin';
 
 type LiveEvent = {
@@ -17,6 +21,28 @@ type LiveEvent = {
     qr_rotation_seconds: number;
     attendances_count: number;
     display_url: string;
+    has_display_pin: boolean;
+};
+
+type RosterStats = {
+    expected: number;
+    checked_in: number;
+    missing: number;
+    present: number;
+    late: number;
+    manual_override: number;
+};
+
+type MissingEmployee = {
+    id: string;
+    name: string;
+    employee_number: string | null;
+    department_name: string | null;
+};
+
+type DepartmentOption = {
+    id: string;
+    name: string;
 };
 
 type QrPreview = {
@@ -29,6 +55,10 @@ const props = defineProps<{
     session: EventLiveSession | null;
     qr: QrPreview | null;
     recentAttendances: EventLiveAttendance[];
+    rosterStats: RosterStats;
+    missingEmployees: MissingEmployee[];
+    departments: DepartmentOption[];
+    filters: { department_id: string | null };
     can: {
         manageSession: boolean;
         viewAttendances: boolean;
@@ -59,8 +89,27 @@ function formatTime(iso: string): string {
 
 function reloadLive(): void {
     router.reload({
-        only: ['session', 'qr', 'recentAttendances', 'event'],
+        only: [
+            'session',
+            'qr',
+            'recentAttendances',
+            'event',
+            'rosterStats',
+            'missingEmployees',
+        ],
     });
+}
+
+function filterByDepartment(departmentId: string): void {
+    router.get(
+        live.url(props.event.id, {
+            query: {
+                department_id: departmentId === '' ? undefined : departmentId,
+            },
+        }),
+        {},
+        { preserveState: true, preserveScroll: true },
+    );
 }
 
 function endSession(): void {
@@ -109,6 +158,41 @@ onUnmounted(() => {
                 </Button>
             </template>
         </AdminPageHeader>
+
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div
+                class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+            >
+                <p class="text-sm text-muted-foreground">Expected</p>
+                <p class="text-2xl font-bold tabular-nums">
+                    {{ rosterStats.expected }}
+                </p>
+            </div>
+            <div
+                class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+            >
+                <p class="text-sm text-muted-foreground">Checked in</p>
+                <p class="text-2xl font-bold tabular-nums text-emerald-600">
+                    {{ rosterStats.checked_in }}
+                </p>
+            </div>
+            <div
+                class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+            >
+                <p class="text-sm text-muted-foreground">Missing</p>
+                <p class="text-2xl font-bold tabular-nums text-amber-600">
+                    {{ rosterStats.missing }}
+                </p>
+            </div>
+            <div
+                class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+            >
+                <p class="text-sm text-muted-foreground">Late</p>
+                <p class="text-2xl font-bold tabular-nums">
+                    {{ rosterStats.late }}
+                </p>
+            </div>
+        </div>
 
         <div class="grid gap-6 lg:grid-cols-3">
             <div
@@ -216,7 +300,39 @@ onUnmounted(() => {
                     >
                         {{ event.display_url }}
                     </a>
+                    <p
+                        v-if="event.has_display_pin"
+                        class="mt-2 text-xs text-muted-foreground"
+                    >
+                        PIN protection is enabled.
+                    </p>
                 </div>
+
+                <Form
+                    v-if="can.manageSession"
+                    :action="EventDisplayPinController.update.url(event.id)"
+                    method="post"
+                    class="space-y-3 border-t pt-4"
+                    v-slot="{ errors, processing }"
+                >
+                    <p class="text-sm font-medium">Display PIN</p>
+                    <p class="text-xs text-muted-foreground">
+                        Optional 4-digit PIN for the venue display URL. Leave
+                        blank to remove.
+                    </p>
+                    <Input
+                        name="pin"
+                        type="password"
+                        inputmode="numeric"
+                        maxlength="4"
+                        placeholder="••••"
+                        autocomplete="off"
+                    />
+                    <InputError :message="errors.pin" />
+                    <Button type="submit" size="sm" variant="outline" :disabled="processing">
+                        Save PIN
+                    </Button>
+                </Form>
             </div>
 
             <div
@@ -234,7 +350,7 @@ onUnmounted(() => {
                         <tr>
                             <th class="pb-2 font-medium">Employee</th>
                             <th class="pb-2 font-medium">Time</th>
-                            <th class="pb-2 font-medium">Source</th>
+                            <th class="pb-2 font-medium">Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -255,8 +371,8 @@ onUnmounted(() => {
                             <td class="py-2 text-muted-foreground">
                                 {{ formatTime(row.checked_in_at) }}
                             </td>
-                            <td class="py-2 capitalize text-muted-foreground">
-                                {{ row.source }}
+                            <td class="py-2 text-muted-foreground">
+                                {{ row.status_label ?? row.status }}
                             </td>
                         </tr>
                         <tr v-if="recentAttendances.length === 0">
@@ -270,6 +386,75 @@ onUnmounted(() => {
                     </tbody>
                 </table>
             </div>
+        </div>
+
+        <div
+            class="rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+        >
+            <div
+                class="flex flex-col gap-4 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+                <h2 class="font-semibold">
+                    Missing employees ({{ missingEmployees.length }})
+                </h2>
+                <div class="flex items-center gap-2">
+                    <Label for="department_filter" class="sr-only"
+                        >Department</Label
+                    >
+                    <select
+                        id="department_filter"
+                        class="flex h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+                        :value="filters.department_id ?? ''"
+                        @change="
+                            filterByDepartment(
+                                ($event.target as HTMLSelectElement).value,
+                            )
+                        "
+                    >
+                        <option value="">All departments</option>
+                        <option
+                            v-for="dept in departments"
+                            :key="dept.id"
+                            :value="dept.id"
+                        >
+                            {{ dept.name }}
+                        </option>
+                    </select>
+                </div>
+            </div>
+            <table class="w-full text-sm">
+                <thead class="border-b bg-muted/30 text-left">
+                    <tr>
+                        <th class="px-4 py-3 font-medium">Employee</th>
+                        <th class="px-4 py-3 font-medium">Department</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr
+                        v-for="employee in missingEmployees"
+                        :key="employee.id"
+                        class="border-b last:border-0"
+                    >
+                        <td class="px-4 py-3">
+                            <div class="font-medium">{{ employee.name }}</div>
+                            <div class="text-muted-foreground">
+                                {{ employee.employee_number ?? '—' }}
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-muted-foreground">
+                            {{ employee.department_name ?? '—' }}
+                        </td>
+                    </tr>
+                    <tr v-if="missingEmployees.length === 0">
+                        <td
+                            colspan="2"
+                            class="px-4 py-8 text-center text-muted-foreground"
+                        >
+                            Everyone expected has checked in.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </template>

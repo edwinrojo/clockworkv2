@@ -3,6 +3,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import {
     BookOpen,
     Building2,
+    BarChart3,
     Calendar,
     FolderGit2,
     LayoutGrid,
@@ -26,6 +27,7 @@ import {
 import { dashboard } from '@/routes';
 import { index as departmentsIndex } from '@/routes/departments';
 import { index as eventsIndex } from '@/routes/events';
+import { index as reportsIndex } from '@/routes/reports';
 import { index as usersIndex } from '@/routes/users';
 import { index as venuesIndex } from '@/routes/venues';
 import type { NavItem } from '@/types';
@@ -46,6 +48,11 @@ const mainNavItems = computed<NavItem[]>(() => {
             title: 'Events',
             href: eventsIndex(),
             icon: Calendar,
+        });
+        items.push({
+            title: 'Reports',
+            href: reportsIndex(),
+            icon: BarChart3,
         });
     }
 

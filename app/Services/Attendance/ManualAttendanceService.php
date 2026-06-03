@@ -35,14 +35,19 @@ class ManualAttendanceService
             ->latest('started_at')
             ->first();
 
-        return DB::transaction(function () use ($event, $employee, $admin, $reason, $status, $session): Attendance {
+        $checkedInAt = now();
+        $resolvedStatus = $status === AttendanceStatus::Present
+            ? app(AttendanceStatusResolver::class)->forCheckIn($event, $checkedInAt)
+            : $status;
+
+        return DB::transaction(function () use ($event, $employee, $admin, $reason, $resolvedStatus, $session, $checkedInAt): Attendance {
             $attendance = Attendance::query()->create([
                 'event_id' => $event->id,
                 'event_session_id' => $session?->id,
                 'user_id' => $employee->id,
-                'checked_in_at' => now(),
+                'checked_in_at' => $checkedInAt,
                 'source' => AttendanceSource::Manual,
-                'status' => $status,
+                'status' => $resolvedStatus,
                 'manual_override_by' => $admin->id,
                 'manual_override_reason' => $reason,
             ]);

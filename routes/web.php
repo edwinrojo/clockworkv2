@@ -1,17 +1,22 @@
 <?php
 
 use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\DisplayUnlockController;
 use App\Http\Controllers\EventAttendanceController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\EventDisplayPinController;
 use App\Http\Controllers\EventLiveController;
 use App\Http\Controllers\EventSessionController;
 use App\Http\Controllers\QrDisplayController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VenueController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
 
+Route::get('display/{displaySecret}/unlock', [DisplayUnlockController::class, 'create'])->name('display.unlock');
+Route::post('display/{displaySecret}/unlock', [DisplayUnlockController::class, 'store'])->name('display.unlock.store');
 Route::get('display/{displaySecret}', [QrDisplayController::class, 'show'])->name('display.show');
 Route::get('display/{displaySecret}/token', [QrDisplayController::class, 'token'])->name('display.token');
 
@@ -32,6 +37,12 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::get('events/{event}/attendances', [EventAttendanceController::class, 'index'])->name('events.attendances');
     Route::post('events/{event}/attendances', [EventAttendanceController::class, 'store'])->name('events.attendances.store');
     Route::get('events/{event}/attendances/export', [EventAttendanceController::class, 'export'])->name('events.attendances.export');
+
+    Route::post('events/{event}/display-pin', [EventDisplayPinController::class, 'update'])->name('events.display-pin.update');
+
+    Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');
+    Route::get('reports/events/{event}', [ReportController::class, 'show'])->name('reports.show');
 
     Route::resource('users', UserController::class)->except(['show']);
 });

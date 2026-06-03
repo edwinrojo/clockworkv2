@@ -3,7 +3,6 @@
 namespace App\Services\Attendance;
 
 use App\Enums\AttendanceSource;
-use App\Enums\AttendanceStatus;
 use App\Enums\CheckInErrorCode;
 use App\Enums\DuplicatePolicy;
 use App\Enums\EventSessionStatus;
@@ -73,6 +72,9 @@ class CheckInService
             throw new CheckInException(CheckInErrorCode::OutsideGeofence);
         }
 
+        $checkedInAt = now();
+        $status = app(AttendanceStatusResolver::class)->forCheckIn($event, $checkedInAt);
+
         $attendance = DB::transaction(function () use (
             $user,
             $event,
@@ -82,6 +84,8 @@ class CheckInService
             $accuracyMeters,
             $gpsCapturedAt,
             $idempotencyKey,
+            $checkedInAt,
+            $status,
         ): Attendance {
             $this->assertNotDuplicate($user, $event);
 
@@ -89,13 +93,13 @@ class CheckInService
                 'event_id' => $event->id,
                 'event_session_id' => $session->id,
                 'user_id' => $user->id,
-                'checked_in_at' => now(),
+                'checked_in_at' => $checkedInAt,
                 'latitude' => $latitude,
                 'longitude' => $longitude,
                 'accuracy_meters' => $accuracyMeters,
-                'gps_captured_at' => $gpsCapturedAt ?? now(),
+                'gps_captured_at' => $gpsCapturedAt ?? $checkedInAt,
                 'source' => AttendanceSource::Mobile,
-                'status' => AttendanceStatus::Present,
+                'status' => $status,
                 'idempotency_key' => $idempotencyKey,
             ]);
         });

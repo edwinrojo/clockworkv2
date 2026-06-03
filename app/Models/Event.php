@@ -31,6 +31,7 @@ use Illuminate\Support\Str;
     'qr_rotation_seconds',
     'duplicate_policy',
     'display_secret',
+    'display_pin_hash',
 ])]
 class Event extends Model
 {

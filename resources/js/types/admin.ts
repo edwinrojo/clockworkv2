@@ -67,6 +67,7 @@ export type EventLiveAttendance = {
     checked_in_at: string;
     source: string;
     status: string;
+    status_label?: string;
 };
 
 export type EventFormOptions = {

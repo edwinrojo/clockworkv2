@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Enums\EventSessionStatus;
 use App\Models\Event;
 use App\Services\Qr\QrTokenService;
+use App\Support\Display\DisplayAccess;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -13,9 +16,13 @@ class QrDisplayController extends Controller
 {
     public function __construct(private QrTokenService $qrTokenService) {}
 
-    public function show(string $displaySecret): Response
+    public function show(Request $request, string $displaySecret): Response|RedirectResponse
     {
         $event = $this->resolveEvent($displaySecret);
+
+        if (DisplayAccess::requiresPin($event) && ! DisplayAccess::isUnlocked($event, $request)) {
+            return redirect()->route('display.unlock', $displaySecret);
+        }
 
         return Inertia::render('display/Show', [
             'event' => [
@@ -28,9 +35,13 @@ class QrDisplayController extends Controller
         ]);
     }
 
-    public function token(string $displaySecret): JsonResponse
+    public function token(Request $request, string $displaySecret): JsonResponse
     {
         $event = $this->resolveEvent($displaySecret);
+
+        if (DisplayAccess::requiresPin($event) && ! DisplayAccess::isUnlocked($event, $request)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
 
         $session = $event->sessions()
             ->where('status', EventSessionStatus::Active)
