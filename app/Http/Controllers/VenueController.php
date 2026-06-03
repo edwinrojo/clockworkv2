@@ -92,6 +92,7 @@ class VenueController extends Controller
             'latitude' => $venue->latitude,
             'longitude' => $venue->longitude,
             'geofence_radius_meters' => $venue->geofence_radius_meters,
+            'geofence_polygon' => $venue->geofence_polygon,
             'accuracy_buffer_meters' => $venue->accuracy_buffer_meters,
             'is_active' => $venue->is_active,
             'events_count' => $venue->events_count ?? 0,

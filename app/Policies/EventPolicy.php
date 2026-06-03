@@ -34,4 +34,19 @@ class EventPolicy
     {
         return $this->canManageOrganization($user);
     }
+
+    public function manageSession(User $user, Event $event): bool
+    {
+        return $this->canManageOrganization($user);
+    }
+
+    public function viewAttendances(User $user, Event $event): bool
+    {
+        return $this->canViewAdmin($user);
+    }
+
+    public function manageAttendances(User $user, Event $event): bool
+    {
+        return $this->canManageOrganization($user);
+    }
 }

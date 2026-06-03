@@ -25,6 +25,11 @@ export type RowAbilities = {
     delete: boolean;
 };
 
+export type EventRowAbilities = RowAbilities & {
+    manageSession: boolean;
+    viewAttendances: boolean;
+};
+
 export type EventRow = {
     id: string;
     title: string;
@@ -44,7 +49,24 @@ export type EventRow = {
     duplicate_policy_label: string;
     sessions_count: number;
     attendances_count: number;
-    can: RowAbilities;
+    can: EventRowAbilities;
+};
+
+export type EventLiveSession = {
+    id: string;
+    status: string;
+    status_label: string;
+    started_at: string;
+    started_by_name: string | null;
+};
+
+export type EventLiveAttendance = {
+    id: string;
+    employee_name: string;
+    employee_number: string | null;
+    checked_in_at: string;
+    source: string;
+    status: string;
 };
 
 export type EventFormOptions = {
@@ -101,6 +123,11 @@ export type UserEditPageProps = UserFormOptions & {
     managedUser: UserRow;
 };
 
+export type GeofenceVertex = {
+    lat: number;
+    lng: number;
+};
+
 export type VenueRow = {
     id: string;
     name: string;
@@ -108,6 +135,7 @@ export type VenueRow = {
     latitude: string;
     longitude: string;
     geofence_radius_meters: number | null;
+    geofence_polygon: GeofenceVertex[] | null;
     accuracy_buffer_meters: number;
     is_active: boolean;
     events_count: number;

@@ -4,7 +4,7 @@ import { computed } from 'vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import EventStatusBadge from '@/components/admin/EventStatusBadge.vue';
 import { Button } from '@/components/ui/button';
-import { create, destroy, edit, index } from '@/routes/events';
+import { attendances, create, destroy, edit, index, live } from '@/routes/events';
 import type { EventRow } from '@/types';
 
 defineProps<{
@@ -99,6 +99,24 @@ function deleteEvent(id: string): void {
                             <div
                                 class="flex items-center justify-end gap-2"
                             >
+                                <Button
+                                    v-if="event.can.manageSession || event.can.viewAttendances"
+                                    variant="secondary"
+                                    size="sm"
+                                    as-child
+                                >
+                                    <Link :href="live(event.id)">Live</Link>
+                                </Button>
+                                <Button
+                                    v-if="event.can.viewAttendances"
+                                    variant="outline"
+                                    size="sm"
+                                    as-child
+                                >
+                                    <Link :href="attendances(event.id)"
+                                        >Attendances</Link
+                                    >
+                                </Button>
                                 <Button
                                     v-if="event.can.update"
                                     variant="outline"

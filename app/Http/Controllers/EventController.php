@@ -120,6 +120,8 @@ class EventController extends Controller
             'can' => [
                 'update' => $request->user()?->can('update', $event) ?? false,
                 'delete' => $request->user()?->can('delete', $event) ?? false,
+                'manageSession' => $request->user()?->can('manageSession', $event) ?? false,
+                'viewAttendances' => $request->user()?->can('viewAttendances', $event) ?? false,
             ],
         ];
     }

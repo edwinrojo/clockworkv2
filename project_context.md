@@ -204,12 +204,10 @@ Modules below are **in scope for this repository**. Flutter is out of scope here
 - Bulk import (CSV/Excel) for HR onboarding
 - Link employee to user account for mobile login
 
-### 3. Venues & Geofences
+### 3. Venues & Geofences — **map editor implemented**
 
-- Venue CRUD: name, address, coordinates
-- Geofence editor: radius and/or polygon vertices (**Leaflet + OSM**)
-- Default accuracy tolerance per venue
-- Map preview in admin (**Leaflet + OSM**)
+- Venue CRUD with **Leaflet + OpenStreetMap** on create/edit (radius or polygon geofence)
+- Default GPS accuracy buffer per venue
 
 ### 4. Events & Schedules
 
@@ -219,25 +217,25 @@ Modules below are **in scope for this repository**. Flutter is out of scope here
 - Recurring events (e.g. weekly Monday convocation) — optional
 - Check-in window (open/close times) distinct from event display time if needed
 
-### 5. Event Sessions & QR Token Service
+### 5. Event Sessions & QR Token Service — **implemented**
 
-- **Live session** per event (start/stop from admin)
-- Token generation, rotation, invalidation on session end
-- Cached token store (Redis) with TTL
-- Signed payload or opaque ID → server lookup
+- Admin: start / pause / resume / end session; manual “rotate QR now”
+- `QrTokenService` issues hashed tokens; plain token cached until expiry
+- `clockwork:rotate-qr-tokens` scheduled every 10s (run scheduler in production)
+- Event status → `live` on session start, `closed` when session ends
 
-### 6. Venue QR Display (Presentation UI)
+### 6. Venue QR Display (Presentation UI) — **implemented**
 
-- Public or semi-public route: large QR + countdown to next rotation
-- Event name, clock, optional branding (PG-DDS)
-- Kiosk-friendly; no admin chrome; optional PIN to open display URL
+- `GET /display/{display_secret}` — kiosk page (QR + countdown, polls for token)
+- `GET /display/{display_secret}/token` — JSON for current QR payload
+- Link copied from event **Live operations** page
 
 ### 7. Attendance Engine (Core Domain)
 
 - `attendances` records: employee, event, timestamp, GPS snapshot, validation result
 - Idempotent check-in endpoint (mobile API) — **implemented**
 - Duplicate detection rules per event policy
-- Manual check-in / override by admin with reason (audit)
+- Manual check-in / override by admin with reason (audit) — **implemented** (`events/{event}/attendances`)
 - Late / absent flags based on window rules
 
 ### 8. Mobile API (Backend for Flutter) — **implemented (Sanctum v1)**
@@ -258,12 +256,10 @@ REST JSON API at `/api/v1` (Bearer token; employees only):
 - **Error codes:** `CheckInErrorCode` enum (`QR_EXPIRED`, `OUTSIDE_GEOFENCE`, `ALREADY_CHECKED_IN`, `EVENT_NOT_ACTIVE`, `UNAUTHORIZED`, `INVALID_QR`, `ACCOUNT_INACTIVE`).
 - **Not yet:** refresh tokens, password reset via API, rate limiting, device registration.
 
-### 9. Real-Time & Live Operations Dashboard
+### 9. Real-Time & Live Operations Dashboard — **basic implemented**
 
-- Live check-in counter during active session
-- Recent check-ins feed (paginated / websocket optional)
-- Missing employees list vs expected roster
-- Session controls: start, pause, end, rotate QR now
+- `GET /events/{event}/live` — session controls, attendance count, recent check-ins (5s poll)
+- Missing employees roster — not yet
 
 ### 10. Reports & Analytics
 

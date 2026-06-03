@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 #[Fillable([
@@ -71,6 +72,13 @@ class Event extends Model
     public function sessions(): HasMany
     {
         return $this->hasMany(EventSession::class);
+    }
+
+    public function activeSession(): HasOne
+    {
+        return $this->hasOne(EventSession::class)
+            ->whereIn('status', [EventSessionStatus::Active, EventSessionStatus::Paused])
+            ->latestOfMany('started_at');
     }
 
     public function attendances(): HasMany

@@ -18,9 +18,10 @@ enum EventType: string
         return match ($this) {
             self::Convocation => 'Convocation',
             self::Training => 'Training',
-            self::Assembly => 'Assembly',
+            self::Meeting => 'Meeting',
             self::Seminar => 'Seminar',
             self::SpecialEvent => 'Special Event',
+            self::Assembly => 'Assembly',
             self::Workshop => 'Workshop',
             self::Other => 'Other',
         };

@@ -19,8 +19,11 @@ withDefaults(defineProps<Props>(), {
 <template>
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Heading :title="title" :description="description" />
-        <Button v-if="createHref" as-child>
-            <Link :href="createHref">{{ createLabel }}</Link>
-        </Button>
+        <div class="flex flex-wrap items-center gap-2">
+            <slot name="actions" />
+            <Button v-if="createHref" as-child>
+                <Link :href="createHref">{{ createLabel }}</Link>
+            </Button>
+        </div>
     </div>
 </template>

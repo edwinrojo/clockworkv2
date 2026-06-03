@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
+import VenueGeofenceMap from '@/components/venues/VenueGeofenceMap.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -22,7 +23,7 @@ defineProps<Props>();
 </script>
 
 <template>
-    <Form v-bind="form" class="max-w-xl space-y-6"
+    <Form v-bind="form" class="max-w-3xl space-y-6"
         v-slot="{ errors, processing }"
     >
         <div class="grid gap-2">
@@ -48,58 +49,28 @@ defineProps<Props>();
             <InputError :message="errors.address" />
         </div>
 
-        <div class="grid gap-2 sm:grid-cols-2 sm:gap-4">
-            <div class="grid gap-2">
-                <Label for="latitude">Latitude</Label>
-                <Input
-                    id="latitude"
-                    name="latitude"
-                    type="number"
-                    step="any"
-                    :default-value="venue?.latitude"
-                    required
-                />
-                <InputError :message="errors.latitude" />
-            </div>
-            <div class="grid gap-2">
-                <Label for="longitude">Longitude</Label>
-                <Input
-                    id="longitude"
-                    name="longitude"
-                    type="number"
-                    step="any"
-                    :default-value="venue?.longitude"
-                    required
-                />
-                <InputError :message="errors.longitude" />
-            </div>
-        </div>
+        <VenueGeofenceMap
+            :latitude="venue?.latitude ?? 6.75"
+            :longitude="venue?.longitude ?? 125.35"
+            :radius-meters="venue?.geofence_radius_meters ?? 150"
+            :polygon="venue?.geofence_polygon ?? null"
+        />
+        <InputError :message="errors.latitude" />
+        <InputError :message="errors.longitude" />
+        <InputError :message="errors.geofence_radius_meters" />
+        <InputError :message="errors.geofence_polygon" />
 
-        <div class="grid gap-2 sm:grid-cols-2 sm:gap-4">
-            <div class="grid gap-2">
-                <Label for="geofence_radius_meters">Geofence radius (m)</Label>
-                <Input
-                    id="geofence_radius_meters"
-                    name="geofence_radius_meters"
-                    type="number"
-                    min="10"
-                    :default-value="venue?.geofence_radius_meters ?? 150"
-                    placeholder="150"
-                />
-                <InputError :message="errors.geofence_radius_meters" />
-            </div>
-            <div class="grid gap-2">
-                <Label for="accuracy_buffer_meters">GPS buffer (m)</Label>
-                <Input
-                    id="accuracy_buffer_meters"
-                    name="accuracy_buffer_meters"
-                    type="number"
-                    min="0"
-                    :default-value="venue?.accuracy_buffer_meters ?? 50"
-                    required
-                />
-                <InputError :message="errors.accuracy_buffer_meters" />
-            </div>
+        <div class="grid gap-2 sm:max-w-xs">
+            <Label for="accuracy_buffer_meters">GPS buffer (m)</Label>
+            <Input
+                id="accuracy_buffer_meters"
+                name="accuracy_buffer_meters"
+                type="number"
+                min="0"
+                :default-value="venue?.accuracy_buffer_meters ?? 50"
+                required
+            />
+            <InputError :message="errors.accuracy_buffer_meters" />
         </div>
 
         <div class="flex items-center gap-2">

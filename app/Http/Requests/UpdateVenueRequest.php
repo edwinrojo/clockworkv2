@@ -2,12 +2,15 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ValidatesVenueGeofence;
 use App\Models\Venue;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateVenueRequest extends FormRequest
 {
+    use ValidatesVenueGeofence;
+
     public function authorize(): bool
     {
         /** @var Venue $venue */
@@ -18,6 +21,8 @@ class UpdateVenueRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $this->prepareVenueGeofence();
+
         $this->merge([
             'is_active' => $this->boolean('is_active'),
         ]);
@@ -36,6 +41,7 @@ class UpdateVenueRequest extends FormRequest
             'geofence_radius_meters' => ['nullable', 'integer', 'min:10', 'max:50000'],
             'accuracy_buffer_meters' => ['required', 'integer', 'min:0', 'max:500'],
             'is_active' => ['boolean'],
+            ...$this->venueGeofenceRules(),
         ];
     }
 }
