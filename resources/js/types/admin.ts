@@ -7,6 +7,7 @@ export type AdminCan = {
     departments: ResourceAbilities;
     venues: ResourceAbilities;
     events: ResourceAbilities;
+    users: ResourceAbilities;
 };
 
 export type SelectOption = {
@@ -72,6 +73,32 @@ export type DepartmentRow = {
 export type DepartmentOption = {
     id: string;
     name: string;
+};
+
+export type UserRow = {
+    id: string;
+    first_name: string;
+    middle_name: string | null;
+    last_name: string;
+    suffix: string | null;
+    name: string;
+    email: string;
+    role: string;
+    role_label: string;
+    employee_number: string | null;
+    department_id: string | null;
+    department_name: string | null;
+    is_active: boolean;
+    can: RowAbilities;
+};
+
+export type UserFormOptions = {
+    departments: DepartmentOption[];
+    roles: SelectOption[];
+};
+
+export type UserEditPageProps = UserFormOptions & {
+    managedUser: UserRow;
 };
 
 export type VenueRow = {

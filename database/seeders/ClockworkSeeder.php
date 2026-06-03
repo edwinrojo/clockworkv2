@@ -20,17 +20,21 @@ class ClockworkSeeder extends Seeder
         ]);
 
         User::factory()->superAdmin()->create([
-            'name' => 'System Administrator',
+            'first_name' => 'System',
+            'last_name' => 'Administrator',
             'email' => 'admin@clockwork.test',
         ]);
 
         User::factory()->eventManager()->create([
-            'name' => 'Event Coordinator',
+            'first_name' => 'Event',
+            'last_name' => 'Coordinator',
             'email' => 'coordinator@clockwork.test',
         ]);
 
         User::factory()->employee()->forDepartment($hr)->create([
-            'name' => 'Juan Dela Cruz',
+            'first_name' => 'Juan',
+            'middle_name' => 'Dela',
+            'last_name' => 'Cruz',
             'email' => 'employee@clockwork.test',
             'employee_number' => 'EMP-00001',
         ]);

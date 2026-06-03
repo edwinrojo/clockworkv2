@@ -8,6 +8,10 @@ export type UserRole =
 
 export type User = {
     id: string;
+    first_name: string;
+    middle_name: string | null;
+    last_name: string;
+    suffix: string | null;
     name: string;
     email: string;
     role: UserRole;

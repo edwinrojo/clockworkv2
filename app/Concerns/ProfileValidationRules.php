@@ -16,19 +16,22 @@ trait ProfileValidationRules
     protected function profileRules(?string $userId = null): array
     {
         return [
-            'name' => $this->nameRules(),
+            ...$this->structuredNameRules(),
             'email' => $this->emailRules($userId),
         ];
     }
 
     /**
-     * Get the validation rules used to validate user names.
-     *
-     * @return array<int, ValidationRule|array<mixed>|string>
+     * @return array<string, array<int, ValidationRule|array<mixed>|string>>
      */
-    protected function nameRules(): array
+    protected function structuredNameRules(): array
     {
-        return ['required', 'string', 'max:255'];
+        return [
+            'first_name' => ['required', 'string', 'max:100'],
+            'middle_name' => ['nullable', 'string', 'max:100'],
+            'last_name' => ['required', 'string', 'max:100'],
+            'suffix' => ['nullable', 'string', 'max:20'],
+        ];
     }
 
     /**

@@ -19,6 +19,7 @@ class AdminPermissions
                 'departments' => self::emptyAbilities(),
                 'venues' => self::emptyAbilities(),
                 'events' => self::emptyAbilities(),
+                'users' => self::emptyAbilities(),
             ];
         }
 
@@ -34,6 +35,10 @@ class AdminPermissions
             'events' => [
                 'viewAny' => $user->can('viewAny', Event::class),
                 'create' => $user->can('create', Event::class),
+            ],
+            'users' => [
+                'viewAny' => $user->can('viewAny', User::class),
+                'create' => $user->can('create', User::class),
             ],
         ];
     }

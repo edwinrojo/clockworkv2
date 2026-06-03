@@ -7,6 +7,7 @@ import {
     FolderGit2,
     LayoutGrid,
     MapPin,
+    Users,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
@@ -25,6 +26,7 @@ import {
 import { dashboard } from '@/routes';
 import { index as departmentsIndex } from '@/routes/departments';
 import { index as eventsIndex } from '@/routes/events';
+import { index as usersIndex } from '@/routes/users';
 import { index as venuesIndex } from '@/routes/venues';
 import type { NavItem } from '@/types';
 
@@ -67,6 +69,14 @@ const organizationNavItems = computed<NavItem[]>(() => {
             title: 'Venues',
             href: venuesIndex(),
             icon: MapPin,
+        });
+    }
+
+    if (can.users.viewAny) {
+        items.push({
+            title: 'Users',
+            href: usersIndex(),
+            icon: Users,
         });
     }
 
