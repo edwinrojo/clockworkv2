@@ -9,7 +9,8 @@
 | Layer | Technology | Role |
 |-------|------------|------|
 | Backend + Admin | Laravel 13, Inertia v3, Vue 3, Fortify | API, validation, admin dashboard, QR display |
-| Mobile (separate repo) | Flutter | Employee check-in app |
+| Maps & geofencing (admin) | **Leaflet.js** + **OpenStreetMap** tiles | Venue placement, geofence editor (circle/polygon), map preview |
+| Mobile (separate repo) | Flutter | Employee check-in; device GPS for check-in validation |
 | Infra | Queues, caching, DB | High concurrency, audit trail |
 
 ## Organization & Users
@@ -71,10 +72,33 @@ All trust decisions happen on the server. The mobile app is untrusted input.
 
 ## Geolocation & Geofence
 
+### Map stack (decided)
+
+All **admin** location and geofence UI uses **[Leaflet.js](https://leafletjs.com/)** with **[OpenStreetMap](https://www.openstreetmap.org/)** raster tiles (no Google Maps dependency).
+
+| Use case | Where | Notes |
+|----------|--------|--------|
+| Pick venue coordinates | Venue create/edit | Click or drag marker; sync `latitude` / `longitude` |
+| Geofence editor | Venue create/edit | Circle radius and/or polygon vertices on the map |
+| Map preview | Venue detail / list | Read-only bounds + geofence overlay |
+| Live event context | Optional later | Show venue geofence during session ops |
+
+**Conventions for implementation:**
+
+- Vue: wrap Leaflet in a dedicated component (e.g. `VenueMapPicker.vue`, `GeofenceEditor.vue`); load Leaflet CSS once (app or component scope).
+- Default map center: Davao del Sur / Digos City region (~6.75°N, 125.35°E) unless venue coords exist.
+- Persist geofence as today: `geofence_radius_meters` and/or `geofence_polygon` JSON on `venues`; Leaflet is presentation/editing only.
+- **Server remains authoritative** for check-in validation (Haversine / point-in-polygon in PHP); map does not replace backend geofence logic.
+- Attribute OSM/Leaflet per their licenses in app footer or about page when maps ship.
+
+Flutter mobile app uses platform GPS APIs for check-in coordinates; it does **not** need Leaflet unless a native map preview is added later.
+
+### Validation (unchanged)
+
 - Venues define **geofence** (circle radius and/or polygon).
 - Mobile sends latitude, longitude, accuracy (meters), and timestamp.
 - Server evaluates point-in-polygon or distance-from-center; reject if outside tolerance.
-- Configurable **buffer** for GPS inaccuracy at large venues.
+- Configurable **buffer** (`accuracy_buffer_meters`) for GPS inaccuracy at large venues.
 
 ## Security & Compliance
 
@@ -91,6 +115,7 @@ All trust decisions happen on the server. The mobile app is untrusted input.
 - **Laravel Fortify** — login, 2FA, passkeys (admin)
 - **Laravel Wayfinder** — typed frontend routes
 - **PHPUnit** for tests
+- **Leaflet.js** + **OpenStreetMap** — venue maps and geofence editing (to be added to `package.json` when map UI is built)
 - **Queues** — recommended for post-check-in jobs (notifications, exports)
 - **Redis** — recommended for QR token cache and rate limiting at scale
 
@@ -150,6 +175,7 @@ erDiagram
 | Employee ID | `employee_number` (nullable for admins) |
 | Duplicate check-in | Unique per `event_id` + `user_id` (`DuplicatePolicy` on event for future day-level rules) |
 | Geofence | `geofence_radius_meters` and/or `geofence_polygon` JSON on `venues` |
+| Map / geofence UI | Leaflet.js + OpenStreetMap (admin Vue only) |
 | QR display URL | Unguessable `display_secret` on `events` |
 
 ### Seed Accounts (local)
@@ -181,9 +207,9 @@ Modules below are **in scope for this repository**. Flutter is out of scope here
 ### 3. Venues & Geofences
 
 - Venue CRUD: name, address, coordinates
-- Geofence editor: radius and/or polygon vertices
+- Geofence editor: radius and/or polygon vertices (**Leaflet + OSM**)
 - Default accuracy tolerance per venue
-- Map preview in admin (optional phase 2)
+- Map preview in admin (**Leaflet + OSM**)
 
 ### 4. Events & Schedules
 
@@ -209,26 +235,28 @@ Modules below are **in scope for this repository**. Flutter is out of scope here
 ### 7. Attendance Engine (Core Domain)
 
 - `attendances` records: employee, event, timestamp, GPS snapshot, validation result
-- Idempotent check-in endpoint (mobile API)
+- Idempotent check-in endpoint (mobile API) — **implemented**
 - Duplicate detection rules per event policy
 - Manual check-in / override by admin with reason (audit)
 - Late / absent flags based on window rules
 
-### 8. Mobile API (Backend for Flutter)
+### 8. Mobile API (Backend for Flutter) — **implemented (Sanctum v1)**
 
-REST or JSON API (versioned, e.g. `/api/v1`):
+REST JSON API at `/api/v1` (Bearer token; employees only):
 
-| Area | Endpoints (conceptual) |
-|------|------------------------|
-| Auth | Login, logout, refresh, password reset |
-| Profile | Current employee, device registration |
-| Events | Today’s check-in-eligible events |
-| Check-in | Submit scan + GPS; receive success/error codes |
-| History | Employee’s own attendance history |
+| Method | Path | Purpose |
+|--------|------|---------|
+| `POST` | `/api/v1/auth/login` | Email/password → Sanctum token |
+| `POST` | `/api/v1/auth/logout` | Revoke current token |
+| `GET` | `/api/v1/profile` | Current employee |
+| `GET` | `/api/v1/events` | Check-in-eligible live events (active session + window) |
+| `POST` | `/api/v1/check-in` | QR + GPS validation → attendance |
+| `GET` | `/api/v1/attendances` | Paginated attendance history |
 
-- Sanctum personal access tokens or OAuth2 (decide early)
-- Standard error codes for geofence fail, expired QR, duplicate, etc.
-- Rate limiting per user/IP
+- **Auth:** Laravel Sanctum personal access tokens (`HasApiTokens` on `User`; `personal_access_tokens` uses `ulidMorphs` for ULID users).
+- **Services:** `CheckInService`, `GeofenceValidator` (Haversine radius + polygon).
+- **Error codes:** `CheckInErrorCode` enum (`QR_EXPIRED`, `OUTSIDE_GEOFENCE`, `ALREADY_CHECKED_IN`, `EVENT_NOT_ACTIVE`, `UNAUTHORIZED`, `INVALID_QR`, `ACCOUNT_INACTIVE`).
+- **Not yet:** refresh tokens, password reset via API, rate limiting, device registration.
 
 ### 9. Real-Time & Live Operations Dashboard
 
@@ -270,7 +298,7 @@ REST or JSON API (versioned, e.g. `/api/v1`):
 | Phase | Modules | Outcome |
 |-------|---------|---------|
 | **MVP** | 1, 2, 4, 5, 7, 8, 9 (basic) | Single event check-in works end-to-end with Flutter |
-| **V1** | 3, 6, 10 | Full venue/geofence, projector QR, reports |
+| **V1** | 3 (Leaflet maps), 6, 10 | Geofence map UI, projector QR, reports |
 | **V2** | 11, 12, 13 hardening | Notifications, audit, scale tuning |
 
 ## Out of Scope (This Repo)
@@ -301,9 +329,9 @@ Document and version:
 
 - [ ] `DuplicatePolicy::PerCalendarDay` enforcement logic (column exists; service not built)
 - [ ] Offline check-in support (likely no for v1)
-- [ ] Sanctum vs Passport for mobile API
+- [x] Sanctum for mobile API (Passport not used)
 - [ ] Optional staff PIN on QR display page (in addition to `display_secret`)
 
 ---
 
-*Last updated: 2026-06-02 — align with stakeholder decisions as they are made.*
+*Last updated: 2026-06-02 — Leaflet/OSM noted for maps; align with stakeholder decisions as they are made.*

@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use App\Enums\DuplicatePolicy;
+use App\Enums\EventSessionStatus;
 use App\Enums\EventStatus;
 use App\Enums\EventType;
 use Database\Factories\EventFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -74,5 +76,27 @@ class Event extends Model
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class);
+    }
+
+    /**
+     * @param  Builder<Event>  $query
+     */
+    public function scopeEligibleForCheckIn(Builder $query): void
+    {
+        $now = now();
+
+        $query
+            ->where('status', EventStatus::Live)
+            ->where(function (Builder $query) use ($now): void {
+                $query->whereNull('check_in_opens_at')
+                    ->orWhere('check_in_opens_at', '<=', $now);
+            })
+            ->where(function (Builder $query) use ($now): void {
+                $query->whereNull('check_in_closes_at')
+                    ->orWhere('check_in_closes_at', '>=', $now);
+            })
+            ->whereHas('sessions', function (Builder $query): void {
+                $query->where('status', EventSessionStatus::Active);
+            });
     }
 }
