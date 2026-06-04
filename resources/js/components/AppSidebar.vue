@@ -5,6 +5,7 @@ import {
     Building2,
     BarChart3,
     Calendar,
+    ClipboardList,
     FolderGit2,
     LayoutGrid,
     MapPin,
@@ -25,6 +26,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as auditIndex } from '@/routes/audit-log';
 import { index as departmentsIndex } from '@/routes/departments';
 import { index as eventsIndex } from '@/routes/events';
 import { index as reportsIndex } from '@/routes/reports';
@@ -53,6 +55,11 @@ const mainNavItems = computed<NavItem[]>(() => {
             title: 'Reports',
             href: reportsIndex(),
             icon: BarChart3,
+        });
+        items.push({
+            title: 'Audit log',
+            href: auditIndex(),
+            icon: ClipboardList,
         });
     }
 

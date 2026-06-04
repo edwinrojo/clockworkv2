@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { attendances, edit, index, live } from '@/routes/events';
+import { edit as rosterEdit } from '@/routes/events/roster';
 import type { EventLiveAttendance, EventLiveSession } from '@/types/admin';
 
 type LiveEvent = {
@@ -31,6 +32,7 @@ type RosterStats = {
     present: number;
     late: number;
     manual_override: number;
+    roster_scope_label: string;
 };
 
 type MissingEmployee = {
@@ -154,6 +156,9 @@ onUnmounted(() => {
                     <Link :href="attendances(event.id)">All attendances</Link>
                 </Button>
                 <Button variant="outline" as-child>
+                    <Link :href="rosterEdit(event.id)">Expected roster</Link>
+                </Button>
+                <Button variant="outline" as-child>
                     <Link :href="edit(event.id)">Edit event</Link>
                 </Button>
             </template>
@@ -166,6 +171,9 @@ onUnmounted(() => {
                 <p class="text-sm text-muted-foreground">Expected</p>
                 <p class="text-2xl font-bold tabular-nums">
                     {{ rosterStats.expected }}
+                </p>
+                <p class="mt-1 text-xs text-muted-foreground">
+                    {{ rosterStats.roster_scope_label }}
                 </p>
             </div>
             <div

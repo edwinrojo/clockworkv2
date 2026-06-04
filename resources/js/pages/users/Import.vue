@@ -11,9 +11,18 @@ type ImportFailure = {
     messages: string[];
 };
 
+type ImportPreviewRow = {
+    row: number;
+    action: string;
+    email: string;
+    employee_number: string;
+};
+
 type ImportResult = {
     created: number;
+    updated: number;
     failed: ImportFailure[];
+    preview?: ImportPreviewRow[];
 };
 
 defineProps<{
@@ -30,7 +39,6 @@ defineOptions({
         ],
     },
 });
-
 </script>
 
 <template>
@@ -65,8 +73,8 @@ defineOptions({
                 <span class="font-mono">{{ optionalColumns.join(', ') }}</span>
             </p>
             <p class="mt-2 text-xs text-muted-foreground">
-                Department names must match an existing department exactly
-                (case-insensitive). Maximum 500 rows per file.
+                Department names must match an existing department (case-insensitive).
+                Use preview to validate before importing. Maximum 500 rows per file.
             </p>
         </div>
 
@@ -76,9 +84,35 @@ defineOptions({
         >
             <p class="text-sm font-medium">Import summary</p>
             <p class="mt-1 text-sm">
-                {{ importResult.created }} created,
+                {{ importResult.created }} to create,
+                {{ importResult.updated }} to update,
                 {{ importResult.failed.length }} failed
             </p>
+            <table
+                v-if="importResult.preview && importResult.preview.length > 0"
+                class="mt-3 w-full text-sm"
+            >
+                <thead class="border-b text-left text-muted-foreground">
+                    <tr>
+                        <th class="py-2 font-medium">Row</th>
+                        <th class="py-2 font-medium">Action</th>
+                        <th class="py-2 font-medium">Employee</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr
+                        v-for="row in importResult.preview"
+                        :key="row.row"
+                        class="border-b last:border-0"
+                    >
+                        <td class="py-2">{{ row.row }}</td>
+                        <td class="py-2 capitalize">{{ row.action }}</td>
+                        <td class="py-2">
+                            {{ row.employee_number }} · {{ row.email }}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
             <ul
                 v-if="importResult.failed.length > 0"
                 class="mt-3 max-h-64 space-y-2 overflow-y-auto text-sm"
@@ -123,8 +157,18 @@ defineOptions({
                 </p>
             </div>
 
+            <label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="update_existing" value="1" />
+                Update existing employees (match by email or employee number)
+            </label>
+
+            <label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="dry_run" value="1" />
+                Preview only (dry run — no changes saved)
+            </label>
+
             <Button type="submit" :disabled="processing">
-                Import employees
+                Run import
             </Button>
         </Form>
     </div>

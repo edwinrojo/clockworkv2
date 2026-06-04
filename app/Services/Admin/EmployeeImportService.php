@@ -33,10 +33,12 @@ class EmployeeImportService
     /**
      * @return array{
      *     created: int,
-     *     failed: list<array{row: int, messages: list<string>}>
+     *     updated: int,
+     *     failed: list<array{row: int, messages: list<string>}>,
+     *     preview: list<array{row: int, action: string, email: string, employee_number: string}>
      * }
      */
-    public function import(UploadedFile $file): array
+    public function process(UploadedFile $file, bool $dryRun = false, bool $updateExisting = false): array
     {
         $rows = $this->parseCsv($file);
 
@@ -57,14 +59,30 @@ class EmployeeImportService
             ->keyBy(fn (Department $department): string => Str::lower(trim($department->name)));
 
         $created = 0;
+        $updated = 0;
         $failed = [];
+        $preview = [];
 
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
 
             try {
-                $this->createEmployee($row, $departments);
-                $created++;
+                $result = $this->processRow($row, $departments, $dryRun, $updateExisting);
+
+                if ($result['action'] === 'create') {
+                    $created++;
+                } else {
+                    $updated++;
+                }
+
+                if ($dryRun) {
+                    $preview[] = [
+                        'row' => $rowNumber,
+                        'action' => $result['action'],
+                        'email' => (string) ($row['email'] ?? ''),
+                        'employee_number' => (string) ($row['employee_number'] ?? ''),
+                    ];
+                }
             } catch (ValidationException $exception) {
                 $failed[] = [
                     'row' => $rowNumber,
@@ -75,7 +93,9 @@ class EmployeeImportService
 
         return [
             'created' => $created,
+            'updated' => $updated,
             'failed' => $failed,
+            'preview' => $preview,
         ];
     }
 
@@ -163,11 +183,26 @@ class EmployeeImportService
     /**
      * @param  array<string, string|null>  $row
      * @param  Collection<string, Department>  $departments
+     * @return array{action: string}
      */
-    private function createEmployee(array $row, $departments): void
+    private function processRow(array $row, Collection $departments, bool $dryRun, bool $updateExisting): array
     {
         $departmentKey = Str::lower(trim((string) ($row['department'] ?? '')));
         $department = $departments->get($departmentKey);
+
+        $existing = User::query()
+            ->where('role', UserRole::Employee)
+            ->where(function ($query) use ($row): void {
+                $query->where('email', $row['email'] ?? '')
+                    ->orWhere('employee_number', $row['employee_number'] ?? '');
+            })
+            ->first();
+
+        if ($existing !== null && ! $updateExisting) {
+            throw ValidationException::withMessages([
+                'email' => [__('Employee already exists. Enable update existing to modify this row.')],
+            ]);
+        }
 
         $validator = Validator::make(
             [
@@ -181,17 +216,7 @@ class EmployeeImportService
                 'is_active' => $this->parseBoolean($row['is_active'] ?? '1'),
                 'department_id' => $department?->id,
             ],
-            [
-                'employee_number' => ['required', 'string', 'max:50', Rule::unique('users', 'employee_number')],
-                'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')],
-                'first_name' => ['required', 'string', 'max:100'],
-                'middle_name' => ['nullable', 'string', 'max:100'],
-                'last_name' => ['required', 'string', 'max:100'],
-                'suffix' => ['nullable', 'string', 'max:20'],
-                'password' => ['required', 'string', Password::default()],
-                'is_active' => ['boolean'],
-                'department_id' => ['required', 'ulid', Rule::exists('departments', 'id')],
-            ],
+            $this->rulesForRow($existing?->id),
             [
                 'department_id.required' => __('Unknown department ":name".', [
                     'name' => $row['department'] ?? '',
@@ -205,6 +230,26 @@ class EmployeeImportService
 
         $data = $validator->validated();
 
+        if ($dryRun) {
+            return ['action' => $existing !== null ? 'update' : 'create'];
+        }
+
+        if ($existing !== null) {
+            $existing->update([
+                'employee_number' => $data['employee_number'],
+                'email' => $data['email'],
+                'first_name' => $data['first_name'],
+                'middle_name' => $data['middle_name'],
+                'last_name' => $data['last_name'],
+                'suffix' => $data['suffix'],
+                'password' => Hash::make($data['password']),
+                'department_id' => $data['department_id'],
+                'is_active' => $data['is_active'],
+            ]);
+
+            return ['action' => 'update'];
+        }
+
         User::query()->create([
             'employee_number' => $data['employee_number'],
             'email' => $data['email'],
@@ -217,6 +262,41 @@ class EmployeeImportService
             'department_id' => $data['department_id'],
             'is_active' => $data['is_active'],
         ]);
+
+        return ['action' => 'create'];
+    }
+
+    /**
+     * @return array<string, ValidationRule|array<mixed>|string>
+     */
+    private function rulesForRow(?string $userId = null): array
+    {
+        return [
+            'employee_number' => [
+                'required',
+                'string',
+                'max:50',
+                $userId === null
+                    ? Rule::unique('users', 'employee_number')
+                    : Rule::unique('users', 'employee_number')->ignore($userId),
+            ],
+            'email' => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                $userId === null
+                    ? Rule::unique('users', 'email')
+                    : Rule::unique('users', 'email')->ignore($userId),
+            ],
+            'first_name' => ['required', 'string', 'max:100'],
+            'middle_name' => ['nullable', 'string', 'max:100'],
+            'last_name' => ['required', 'string', 'max:100'],
+            'suffix' => ['nullable', 'string', 'max:20'],
+            'password' => ['required', 'string', Password::default()],
+            'is_active' => ['boolean'],
+            'department_id' => ['required', 'ulid', Rule::exists('departments', 'id')],
+        ];
     }
 
     private function parseBoolean(?string $value): bool

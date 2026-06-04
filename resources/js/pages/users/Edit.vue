@@ -42,6 +42,70 @@ defineOptions({
         />
 
         <div
+            v-if="managedUser.can.managePassword"
+            class="max-w-xl space-y-4 rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+        >
+            <p class="text-sm font-medium">Employee password</p>
+            <p class="text-sm text-muted-foreground">
+                Send a mobile reset email or set a temporary password. Both
+                revoke active Flutter sessions.
+            </p>
+            <Form
+                :action="UserController.sendPasswordReset.url(managedUser.id)"
+                method="post"
+                v-slot="{ processing: sendingReset }"
+            >
+                <Button
+                    type="submit"
+                    variant="outline"
+                    size="sm"
+                    :disabled="sendingReset"
+                >
+                    Send password reset email
+                </Button>
+            </Form>
+            <Form
+                :action="UserController.setPassword.url(managedUser.id)"
+                method="post"
+                class="space-y-3 border-t pt-4"
+                v-slot="{ errors, processing: settingPassword }"
+            >
+                <div class="grid gap-2">
+                    <label for="password" class="text-sm font-medium">
+                        Set temporary password
+                    </label>
+                    <input
+                        id="password"
+                        name="password"
+                        type="password"
+                        required
+                        autocomplete="new-password"
+                        class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                    />
+                    <input
+                        name="password_confirmation"
+                        type="password"
+                        required
+                        autocomplete="new-password"
+                        class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                        placeholder="Confirm password"
+                    />
+                    <p v-if="errors.password" class="text-sm text-destructive">
+                        {{ errors.password }}
+                    </p>
+                </div>
+                <Button
+                    type="submit"
+                    variant="secondary"
+                    size="sm"
+                    :disabled="settingPassword"
+                >
+                    Set password
+                </Button>
+            </Form>
+        </div>
+
+        <div
             v-if="managedUser.can.revokeTokens"
             class="max-w-xl rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
         >

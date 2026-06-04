@@ -3,12 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Http\Requests\SetUserPasswordRequest;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
+use App\Notifications\MobileResetPassword;
+use App\Support\Admin\ActivityLogger;
 use App\Support\Admin\UserFormOptions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -134,6 +139,51 @@ class UserController extends Controller
         return back();
     }
 
+    public function sendPasswordReset(Request $request, User $user): RedirectResponse
+    {
+        $this->authorize('update', $user);
+
+        if (! $user->isEmployee() || ! $user->is_active) {
+            return back()->withErrors([
+                'user' => __('Password reset can only be sent to active employees.'),
+            ]);
+        }
+
+        Password::sendResetLink(
+            ['email' => $user->email],
+            function (User $employee, string $token): void {
+                $employee->notify(new MobileResetPassword($token));
+            },
+        );
+
+        ActivityLogger::log($request, 'employee_password_reset_sent', $user);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('Password reset email sent to :email.', ['email' => $user->email]),
+        ]);
+
+        return back();
+    }
+
+    public function setPassword(SetUserPasswordRequest $request, User $user): RedirectResponse
+    {
+        $user->update([
+            'password' => Hash::make($request->validated('password')),
+        ]);
+
+        $user->tokens()->delete();
+
+        ActivityLogger::log($request, 'employee_password_set', $user);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('Temporary password set. Mobile sessions were revoked.'),
+        ]);
+
+        return back();
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -157,6 +207,7 @@ class UserController extends Controller
                 'update' => $request->user()?->can('update', $user) ?? false,
                 'delete' => $request->user()?->can('delete', $user) ?? false,
                 'revokeTokens' => $user->isEmployee() && ($request->user()?->can('update', $user) ?? false),
+                'managePassword' => $user->isEmployee() && ($request->user()?->can('update', $user) ?? false),
             ],
         ];
     }

@@ -3,10 +3,12 @@
 namespace App\Services\Attendance;
 
 use App\Enums\AttendanceStatus;
+use App\Enums\EventRosterScope;
 use App\Enums\UserRole;
 use App\Models\Attendance;
 use App\Models\Event;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class ExpectedRosterService
@@ -20,10 +22,8 @@ class ExpectedRosterService
             ->where('event_id', $event->id)
             ->pluck('user_id');
 
-        return User::query()
-            ->where('role', UserRole::Employee)
-            ->where('is_active', true)
-            ->when($departmentId !== null, fn ($query) => $query->where('department_id', $departmentId))
+        return $this->expectedEmployeesQuery($event)
+            ->when($departmentId !== null, fn (Builder $query) => $query->where('department_id', $departmentId))
             ->whereNotIn('id', $checkedInUserIds)
             ->with('department:id,name')
             ->orderBy('last_name')
@@ -45,13 +45,13 @@ class ExpectedRosterService
      *     present: int,
      *     late: int,
      *     manual_override: int,
+     *     roster_scope: string,
+     *     roster_scope_label: string,
      * }
      */
     public function counts(Event $event, ?string $departmentId = null): array
     {
-        $expectedQuery = User::query()
-            ->where('role', UserRole::Employee)
-            ->where('is_active', true);
+        $expectedQuery = $this->expectedEmployeesQuery($event);
 
         if ($departmentId !== null) {
             $expectedQuery->where('department_id', $departmentId);
@@ -62,7 +62,7 @@ class ExpectedRosterService
         $attendanceQuery = Attendance::query()->where('event_id', $event->id);
 
         if ($departmentId !== null) {
-            $attendanceQuery->whereHas('user', fn ($query) => $query->where('department_id', $departmentId));
+            $attendanceQuery->whereHas('user', fn (Builder $query) => $query->where('department_id', $departmentId));
         }
 
         $checkedIn = (clone $attendanceQuery)->count();
@@ -74,6 +74,37 @@ class ExpectedRosterService
             'present' => (clone $attendanceQuery)->where('status', AttendanceStatus::Present)->count(),
             'late' => (clone $attendanceQuery)->where('status', AttendanceStatus::Late)->count(),
             'manual_override' => (clone $attendanceQuery)->where('status', AttendanceStatus::ManualOverride)->count(),
+            'roster_scope' => $event->roster_scope->value,
+            'roster_scope_label' => $event->roster_scope->label(),
         ];
+    }
+
+    public function expectedCount(Event $event): int
+    {
+        return $this->expectedEmployeesQuery($event)->count();
+    }
+
+    /**
+     * @return Builder<User>
+     */
+    public function expectedEmployeesQuery(Event $event): Builder
+    {
+        $event->loadMissing(['rosterDepartments:id', 'rosterUsers:id']);
+
+        $query = User::query()
+            ->where('role', UserRole::Employee)
+            ->where('is_active', true);
+
+        return match ($event->roster_scope) {
+            EventRosterScope::AllActiveEmployees => $query,
+            EventRosterScope::Departments => $query->whereIn(
+                'department_id',
+                $event->rosterDepartments->pluck('id'),
+            ),
+            EventRosterScope::Employees => $query->whereIn(
+                'id',
+                $event->rosterUsers->pluck('id'),
+            ),
+        };
     }
 }

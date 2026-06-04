@@ -100,6 +100,7 @@ export type DepartmentOption = {
 
 export type UserRowAbilities = RowAbilities & {
     revokeTokens?: boolean;
+    managePassword?: boolean;
 };
 
 export type UserRow = {

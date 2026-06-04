@@ -3,16 +3,17 @@
 namespace App\Services\Reports;
 
 use App\Enums\AttendanceStatus;
-use App\Enums\UserRole;
 use App\Models\Attendance;
 use App\Models\Department;
 use App\Models\Event;
-use App\Models\User;
+use App\Services\Attendance\ExpectedRosterService;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
 class AttendanceReportService
 {
+    public function __construct(private ExpectedRosterService $rosterService) {}
+
     /**
      * @return Collection<int, array<string, mixed>>
      */
@@ -57,22 +58,19 @@ class AttendanceReportService
                 'total' => (int) $row->total,
             ]);
 
-        $activeEmployees = User::query()
-            ->where('role', UserRole::Employee)
-            ->where('is_active', true)
-            ->count();
+        $expectedEmployees = $this->rosterService->expectedCount($event);
 
         return [
             'event' => $this->eventSummaryRow($event),
             'totals' => [
-                'expected_employees' => $activeEmployees,
+                'expected_employees' => $expectedEmployees,
                 'checked_in' => $event->attendances_count,
-                'missing' => max(0, $activeEmployees - $event->attendances_count),
+                'missing' => max(0, $expectedEmployees - $event->attendances_count),
                 'present' => (int) ($byStatus[AttendanceStatus::Present->value] ?? 0),
                 'late' => (int) ($byStatus[AttendanceStatus::Late->value] ?? 0),
                 'manual_override' => (int) ($byStatus[AttendanceStatus::ManualOverride->value] ?? 0),
-                'attendance_rate' => $activeEmployees > 0
-                    ? round(($event->attendances_count / $activeEmployees) * 100, 1)
+                'attendance_rate' => $expectedEmployees > 0
+                    ? round(($event->attendances_count / $expectedEmployees) * 100, 1)
                     : 0,
             ],
             'by_department' => $byDepartment,

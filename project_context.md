@@ -270,6 +270,7 @@ REST JSON API at `/api/v1` (Bearer token; employees only):
 - **Error codes:** `CheckInErrorCode` enum (`QR_EXPIRED`, `OUTSIDE_GEOFENCE`, `ALREADY_CHECKED_IN`, `EVENT_NOT_ACTIVE`, `UNAUTHORIZED`, `INVALID_QR`, `ACCOUNT_INACTIVE`).
 - **Rate limiting:** login 10/min, check-in 30/min, other routes 120/min (per user/IP)
 - **API docs:** `docs/API.md`
+- **Database tables:** `docs/DATABASE.md`
 - **Password reset:** `POST /api/v1/auth/forgot-password`, `POST /api/v1/auth/reset-password` (email deep link via `CLOCKWORK_MOBILE_PASSWORD_RESET_URL`).
 - **One active token:** login revokes all prior Sanctum tokens; admin can revoke from user edit screen.
 - **HR bulk import:** CSV at `/users/import` (employees only, max 500 rows).
@@ -279,6 +280,8 @@ REST JSON API at `/api/v1` (Bearer token; employees only):
 
 - `GET /events/{event}/live` — session controls, stats, recent check-ins (5s poll), missing employees roster with department filter
 - Display PIN management on live page
+- Per-event expected roster (`roster_scope`: all active, selected departments, or selected employees) at `/events/{event}/roster`
+- Operations dashboard at `/dashboard` (live events, check-ins today, recent activity)
 
 ### 10. Reports & Analytics — **implemented**
 
@@ -293,9 +296,9 @@ REST JSON API at `/api/v1` (Bearer token; employees only):
 
 ### 12. Audit & System Administration
 
-- Activity log (model changes, manual overrides)
+- Activity log UI at `/audit-log` (manual overrides, imports, password actions, roster updates)
 - System settings: QR TTL, default geofence buffer, rate limits
-- Admin user management
+- Admin user management — employee password reset email + set temporary password on user edit
 - Health: queue status, failed jobs (internal)
 
 ### 13. Infrastructure & Performance

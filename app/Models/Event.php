@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DuplicatePolicy;
+use App\Enums\EventRosterScope;
 use App\Enums\EventSessionStatus;
 use App\Enums\EventStatus;
 use App\Enums\EventType;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
@@ -30,6 +32,7 @@ use Illuminate\Support\Str;
     'check_in_closes_at',
     'qr_rotation_seconds',
     'duplicate_policy',
+    'roster_scope',
     'display_secret',
     'display_pin_hash',
 ])]
@@ -53,6 +56,7 @@ class Event extends Model
             'type' => EventType::class,
             'status' => EventStatus::class,
             'duplicate_policy' => DuplicatePolicy::class,
+            'roster_scope' => EventRosterScope::class,
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
             'check_in_opens_at' => 'datetime',
@@ -85,6 +89,16 @@ class Event extends Model
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class);
+    }
+
+    public function rosterDepartments(): BelongsToMany
+    {
+        return $this->belongsToMany(Department::class, 'event_department');
+    }
+
+    public function rosterUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'event_user');
     }
 
     /**
