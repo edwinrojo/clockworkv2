@@ -160,10 +160,24 @@ class CheckInService
             return $venue;
         }
 
-        return Cache::remember(
+        /** @var array<string, mixed> $attributes */
+        $attributes = Cache::remember(
             "venue:geofence:{$venue->id}",
             $ttl,
-            fn (): Venue => $venue->fresh() ?? $venue,
+            function () use ($venue): array {
+                $fresh = $venue->fresh() ?? $venue;
+
+                return [
+                    'id' => $fresh->id,
+                    'latitude' => $fresh->latitude,
+                    'longitude' => $fresh->longitude,
+                    'geofence_radius_meters' => $fresh->geofence_radius_meters,
+                    'geofence_polygon' => $fresh->geofence_polygon,
+                    'accuracy_buffer_meters' => $fresh->accuracy_buffer_meters,
+                ];
+            },
         );
+
+        return (new Venue)->forceFill($attributes)->syncOriginal();
     }
 }

@@ -5,6 +5,7 @@ namespace Tests\Feature\Api\V1;
 use App\Models\Attendance;
 use App\Models\QrToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\Sanctum;
 use Tests\Concerns\CreatesMobileCheckInScenario;
 use Tests\TestCase;
@@ -116,5 +117,31 @@ class MobileCheckInTest extends TestCase
             ->assertJsonPath('data.attendance.id', $attendanceId);
 
         $this->assertSame(1, Attendance::query()->where('user_id', $scenario['employee']->id)->count());
+    }
+
+    public function test_check_in_succeeds_when_geofence_is_cached_as_attributes(): void
+    {
+        config(['clockwork.venue_geofence_cache_seconds' => 300]);
+
+        $scenario = $this->createMobileCheckInScenario();
+        $venue = $scenario['event']->venue;
+
+        Cache::put("venue:geofence:{$venue->id}", [
+            'id' => $venue->id,
+            'latitude' => $venue->latitude,
+            'longitude' => $venue->longitude,
+            'geofence_radius_meters' => $venue->geofence_radius_meters,
+            'geofence_polygon' => $venue->geofence_polygon,
+            'accuracy_buffer_meters' => $venue->accuracy_buffer_meters,
+        ], 300);
+
+        Sanctum::actingAs($scenario['employee']);
+
+        $this->postJson('/api/v1/check-in', [
+            'qr_token' => $scenario['plainToken'],
+            'latitude' => 6.75,
+            'longitude' => 125.35,
+            'accuracy' => 10,
+        ])->assertCreated();
     }
 }

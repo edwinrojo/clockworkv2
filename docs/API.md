@@ -177,7 +177,17 @@ Revokes the current access token. Requires authentication.
 
 ### GET `/events`
 
-Lists events eligible for check-in (live status, active session, within check-in window).
+Lists events eligible for check-in. **All** must be true:
+
+| Requirement | Detail |
+|-------------|--------|
+| Event status | `live` |
+| Check-in window | `check_in_opens_at` ≤ now ≤ `check_in_closes_at` (null bounds = open) |
+| Session | At least one `event_sessions` row with status **`active`** (not `paused` or `ended`) |
+
+Starting a session from **Live ops** sets the event live and opens the check-in window if it was still scheduled in the future.
+
+If the list is empty: confirm session is **Active** (not Paused), and that check-in open/close times include the current time.
 
 **Success `200`**
 

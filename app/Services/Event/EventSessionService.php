@@ -24,7 +24,7 @@ class EventSessionService
         }
 
         return DB::transaction(function () use ($event, $startedBy): EventSession {
-            $event->update(['status' => EventStatus::Live]);
+            $this->markEventLiveWithOpenCheckInWindow($event);
 
             $session = EventSession::query()->create([
                 'event_id' => $event->id,
@@ -65,6 +65,8 @@ class EventSessionService
 
         $session->update(['status' => EventSessionStatus::Active]);
         $session->loadMissing('event');
+
+        $this->markEventLiveWithOpenCheckInWindow($session->event);
 
         $this->qrTokenService->issueToken($session);
 
@@ -116,5 +118,27 @@ class EventSessionService
             ->whereIn('status', [EventSessionStatus::Active, EventSessionStatus::Paused])
             ->latest('started_at')
             ->first();
+    }
+
+    /**
+     * Coordinators expect check-in to open when a session goes live, even if the
+     * event was scheduled with a future check_in_opens_at.
+     */
+    private function markEventLiveWithOpenCheckInWindow(Event $event): void
+    {
+        $now = now();
+        $attributes = ['status' => EventStatus::Live];
+
+        if ($event->check_in_opens_at === null || $event->check_in_opens_at->isFuture()) {
+            $attributes['check_in_opens_at'] = $now;
+        }
+
+        if ($event->check_in_closes_at === null || $event->check_in_closes_at->lte($now)) {
+            $attributes['check_in_closes_at'] = $event->ends_at !== null && $event->ends_at->isFuture()
+                ? $event->ends_at
+                : $now->copy()->addHours(2);
+        }
+
+        $event->update($attributes);
     }
 }

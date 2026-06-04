@@ -9,6 +9,7 @@ use App\Models\EventSession;
 use App\Models\User;
 use App\Services\Qr\QrTokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\Concerns\CreatesMobileCheckInScenario;
 use Tests\TestCase;
 
@@ -54,6 +55,33 @@ class EventSessionTest extends TestCase
         $session->refresh();
         $this->assertSame(EventSessionStatus::Ended, $session->status);
         $this->assertSame(EventStatus::Closed, $event->fresh()->status);
+    }
+
+    public function test_starting_session_opens_future_check_in_window_for_mobile_api(): void
+    {
+        $manager = User::factory()->eventManager()->create();
+        $employee = User::factory()->employee()->create();
+
+        $event = Event::factory()->create([
+            'status' => EventStatus::Scheduled,
+            'check_in_opens_at' => now()->addWeek(),
+            'check_in_closes_at' => now()->addWeek()->addHours(2),
+        ]);
+
+        $this->actingAs($manager)
+            ->post(route('events.session.start', $event))
+            ->assertRedirect(route('events.live', $event));
+
+        $event->refresh();
+
+        $this->assertTrue($event->check_in_opens_at->lte(now()));
+        $this->assertTrue($event->check_in_closes_at->gte(now()));
+
+        Sanctum::actingAs($employee);
+
+        $this->getJson('/api/v1/events')
+            ->assertOk()
+            ->assertJsonPath('data.events.0.id', $event->id);
     }
 
     public function test_rotate_now_issues_new_cached_token(): void
