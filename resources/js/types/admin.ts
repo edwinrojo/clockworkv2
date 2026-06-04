@@ -98,6 +98,10 @@ export type DepartmentOption = {
     name: string;
 };
 
+export type UserRowAbilities = RowAbilities & {
+    revokeTokens?: boolean;
+};
+
 export type UserRow = {
     id: string;
     first_name: string;
@@ -112,7 +116,7 @@ export type UserRow = {
     department_id: string | null;
     department_name: string | null;
     is_active: boolean;
-    can: RowAbilities;
+    can: UserRowAbilities;
 };
 
 export type UserFormOptions = {

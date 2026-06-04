@@ -15,8 +15,8 @@ class ClockworkSeeder extends Seeder
     public function run(): void
     {
         $hr = Department::factory()->create([
-            'name' => 'Human Resource Management Office',
-            'code' => 'HRMO',
+            'name' => 'ProvincialHuman Resource Management Office',
+            'code' => 'PHRMO',
         ]);
 
         User::factory()->superAdmin()->create([
@@ -40,7 +40,7 @@ class ClockworkSeeder extends Seeder
         ]);
 
         $venue = Venue::factory()->create([
-            'name' => 'Provincial Capitol Session Hall',
+            'name' => 'Davao del Sur Coliseum',
             'address' => 'Digos City, Davao del Sur',
             'latitude' => 6.7495,
             'longitude' => 125.3557,

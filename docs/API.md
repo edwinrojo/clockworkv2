@@ -2,6 +2,18 @@
 
 Base URL: `{APP_URL}/api/v1`
 
+## Deployment assumption
+
+The Flutter app is **one employee per device** (assigned phone, no shared login or kiosk mode on mobile). Integrators should:
+
+- Log in once and store the Bearer token in platform secure storage.
+- Send a stable `device_name` on login (e.g. `"PG-DDS-2841"` or `"Samsung A14"`) for support and Sanctum token labels.
+- Not implement multi-account switching on the same installation.
+
+Venue QR codes are shown on the **web display** (`/display/{secret}`), not inside the employee app.
+
+---
+
 All authenticated endpoints require:
 
 ```
@@ -15,6 +27,7 @@ Content-Type: application/json
 | Endpoint group | Limit | Key |
 |----------------|-------|-----|
 | `POST /auth/login` | 10 / minute | IP |
+| `POST /auth/forgot-password`, `POST /auth/reset-password` | 5 / minute | IP |
 | `POST /check-in` | 30 / minute | User ID |
 | Other authenticated routes | 120 / minute | User ID |
 
@@ -34,7 +47,18 @@ Employee login only (admin roles are rejected).
 {
   "email": "employee@example.com",
   "password": "password",
-  "device_name": "optional-device-label"
+  "device_name": "PG-DDS-2841"
+}
+```
+
+`device_name` is optional but recommended: it labels the Sanctum token (useful when revoking tokens per device). It does not bind check-ins to hardware in v1.
+
+**Body (minimal)**
+
+```json
+{
+  "email": "employee@example.com",
+  "password": "password"
 }
 ```
 
@@ -54,6 +78,61 @@ Employee login only (admin roles are rejected).
 
 - `422` — Invalid credentials
 - `403` — `ACCOUNT_INACTIVE` or `UNAUTHORIZED` (non-employee)
+
+### POST `/auth/forgot-password`
+
+Sends a password reset email to active employees only. Always returns the same message (does not reveal whether the email exists).
+
+**Body**
+
+```json
+{
+  "email": "employee@example.com"
+}
+```
+
+**Success `200`**
+
+```json
+{
+  "data": {
+    "message": "If that email is registered, a password reset link has been sent."
+  }
+}
+```
+
+The email link uses `CLOCKWORK_MOBILE_PASSWORD_RESET_URL` (default `clockwork://reset-password`) with `token` and `email` query parameters for the Flutter app.
+
+### POST `/auth/reset-password`
+
+Resets the password and revokes all Sanctum tokens for that employee.
+
+**Body**
+
+```json
+{
+  "email": "employee@example.com",
+  "token": "from-email-link",
+  "password": "new-secure-password",
+  "password_confirmation": "new-secure-password"
+}
+```
+
+**Success `200`**
+
+```json
+{
+  "data": {
+    "message": "Your password has been reset. Please sign in on your device."
+  }
+}
+```
+
+**Errors**
+
+- `422` — Invalid or expired token, or non-employee account
+
+On login, all previous API tokens for that employee are revoked (one active session per employee device).
 
 ### POST `/auth/logout`
 

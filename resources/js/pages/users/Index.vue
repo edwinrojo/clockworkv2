@@ -6,6 +6,7 @@ import StatusBadge from '@/components/admin/StatusBadge.vue';
 import UserRoleBadge from '@/components/admin/UserRoleBadge.vue';
 import { Button } from '@/components/ui/button';
 import { create, destroy, edit, index } from '@/routes/users';
+import { create as importEmployees } from '@/routes/users/import';
 import type { UserRow } from '@/types/admin';
 
 defineProps<{
@@ -39,7 +40,13 @@ function deleteUser(id: string): void {
             description="Manage employee and admin accounts"
             :create-href="canCreate ? create() : undefined"
             create-label="Add user"
-        />
+        >
+            <template v-if="canCreate" #actions>
+                <Button variant="outline" as-child>
+                    <Link :href="importEmployees()">Import CSV</Link>
+                </Button>
+            </template>
+        </AdminPageHeader>
 
         <div
             class="overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"

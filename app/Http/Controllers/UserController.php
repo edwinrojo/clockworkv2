@@ -114,6 +114,26 @@ class UserController extends Controller
         return to_route('users.index');
     }
 
+    public function revokeTokens(Request $request, User $user): RedirectResponse
+    {
+        $this->authorize('update', $user);
+
+        if (! $user->isEmployee()) {
+            return back()->withErrors([
+                'user' => __('Only employee mobile sessions can be revoked.'),
+            ]);
+        }
+
+        $user->tokens()->delete();
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('Mobile sessions revoked for :name.', ['name' => $user->name]),
+        ]);
+
+        return back();
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -136,6 +156,7 @@ class UserController extends Controller
             'can' => [
                 'update' => $request->user()?->can('update', $user) ?? false,
                 'delete' => $request->user()?->can('delete', $user) ?? false,
+                'revokeTokens' => $user->isEmployee() && ($request->user()?->can('update', $user) ?? false),
             ],
         ];
     }

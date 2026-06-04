@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Form, Head, Link } from '@inertiajs/vue3';
 import UserController from '@/actions/App/Http/Controllers/UserController';
 import Heading from '@/components/Heading.vue';
 import UserForm from '@/components/users/UserForm.vue';
@@ -40,5 +40,31 @@ defineOptions({
             :managed-user="managedUser"
             submit-label="Save changes"
         />
+
+        <div
+            v-if="managedUser.can.revokeTokens"
+            class="max-w-xl rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+        >
+            <p class="text-sm font-medium">Mobile sessions</p>
+            <p class="mt-1 text-sm text-muted-foreground">
+                Revoke all Sanctum tokens on the employee’s assigned device.
+                They must sign in again in the Flutter app.
+            </p>
+            <Form
+                :action="UserController.revokeTokens.url(managedUser.id)"
+                method="post"
+                class="mt-4"
+                v-slot="{ processing }"
+            >
+                <Button
+                    type="submit"
+                    variant="outline"
+                    size="sm"
+                    :disabled="processing"
+                >
+                    Revoke mobile sessions
+                </Button>
+            </Form>
+        </div>
     </div>
 </template>

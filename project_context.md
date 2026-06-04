@@ -13,6 +13,20 @@
 | Mobile (separate repo) | Flutter | Employee check-in; device GPS for check-in validation |
 | Infra | Queues, caching, DB | High concurrency, audit trail |
 
+## Mobile deployment model (Flutter)
+
+**One employee, one device** — each government-issued or assigned phone is used by a single employee only. There is no shared kiosk or “switch user” flow on mobile.
+
+| Implication | Approach |
+|-------------|----------|
+| Auth UX | Login once per device; persist Sanctum token in secure storage; optional `device_name` on login for support/audit (e.g. asset tag), not multi-account switching |
+| API design | Rate limits and check-in idempotency are keyed per **user**, which matches thousands of devices checking in concurrently |
+| Out of scope (mobile) | Shared-tablet check-in, QR scan on behalf of another employee, admin roles on the Flutter app |
+| Security | Lost/stolen device = compromise of that employee’s token only; HR/IT can deactivate the user or revoke tokens from admin (token revocation UI optional later) |
+| Venue display | Remains a separate **kiosk/browser** URL (`/display/{secret}`), not the Flutter app |
+
+The Laravel API does not enforce hardware binding in v1; trust is “this bearer token belongs to this employee.” Stricter device registration can be added later if IT requires it.
+
 ## Organization & Users
 
 - **Client:** Provincial Government of Davao del Sur (PG-DDS).
@@ -201,7 +215,7 @@ Modules below are **in scope for this repository**. Flutter is out of scope here
 
 - Departments / offices / divisions (hierarchical optional)
 - Employee profiles: employee ID, name, email, status (active/inactive)
-- Bulk import (CSV/Excel) for HR onboarding
+- Bulk import (CSV) for HR onboarding — **implemented** at `/users/import`
 - Link employee to user account for mobile login
 
 ### 3. Venues & Geofences — **map editor implemented**
@@ -256,7 +270,10 @@ REST JSON API at `/api/v1` (Bearer token; employees only):
 - **Error codes:** `CheckInErrorCode` enum (`QR_EXPIRED`, `OUTSIDE_GEOFENCE`, `ALREADY_CHECKED_IN`, `EVENT_NOT_ACTIVE`, `UNAUTHORIZED`, `INVALID_QR`, `ACCOUNT_INACTIVE`).
 - **Rate limiting:** login 10/min, check-in 30/min, other routes 120/min (per user/IP)
 - **API docs:** `docs/API.md`
-- **Not yet:** refresh tokens, password reset via API, device registration.
+- **Password reset:** `POST /api/v1/auth/forgot-password`, `POST /api/v1/auth/reset-password` (email deep link via `CLOCKWORK_MOBILE_PASSWORD_RESET_URL`).
+- **One active token:** login revokes all prior Sanctum tokens; admin can revoke from user edit screen.
+- **HR bulk import:** CSV at `/users/import` (employees only, max 500 rows).
+- **Scale:** composite indexes on `users` and `event_sessions`; venue geofence cache during check-in (`CLOCKWORK_VENUE_GEOFENCE_CACHE_SECONDS`).
 
 ### 9. Real-Time & Live Operations Dashboard — **implemented**
 

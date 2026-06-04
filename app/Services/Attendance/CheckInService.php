@@ -13,8 +13,10 @@ use App\Models\Event;
 use App\Models\EventSession;
 use App\Models\QrToken;
 use App\Models\User;
+use App\Models\Venue;
 use App\Services\Geofence\GeofenceValidator;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class CheckInService
@@ -66,7 +68,7 @@ class CheckInService
 
         $this->assertEventIsOpenForCheckIn($event, $session);
 
-        $venue = $event->venue;
+        $venue = $this->venueForGeofenceCheck($event->venue);
 
         if (! $this->geofenceValidator->isWithin($venue, $latitude, $longitude, $accuracyMeters)) {
             throw new CheckInException(CheckInErrorCode::OutsideGeofence);
@@ -144,5 +146,24 @@ class CheckInService
         if ($query->exists()) {
             throw new CheckInException(CheckInErrorCode::AlreadyCheckedIn);
         }
+    }
+
+    private function venueForGeofenceCheck(?Venue $venue): ?Venue
+    {
+        if ($venue === null) {
+            return null;
+        }
+
+        $ttl = (int) config('clockwork.venue_geofence_cache_seconds', 300);
+
+        if ($ttl <= 0) {
+            return $venue;
+        }
+
+        return Cache::remember(
+            "venue:geofence:{$venue->id}",
+            $ttl,
+            fn (): Venue => $venue->fresh() ?? $venue,
+        );
     }
 }

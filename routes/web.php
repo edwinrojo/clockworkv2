@@ -10,6 +10,7 @@ use App\Http\Controllers\EventSessionController;
 use App\Http\Controllers\QrDisplayController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\UserImportController;
 use App\Http\Controllers\VenueController;
 use Illuminate\Support\Facades\Route;
 
@@ -44,6 +45,10 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');
     Route::get('reports/events/{event}', [ReportController::class, 'show'])->name('reports.show');
 
+    Route::get('users/import', [UserImportController::class, 'create'])->name('users.import.create');
+    Route::post('users/import', [UserImportController::class, 'store'])->name('users.import.store');
+    Route::get('users/import/template', [UserImportController::class, 'template'])->name('users.import.template');
+    Route::post('users/{user}/revoke-tokens', [UserController::class, 'revokeTokens'])->name('users.revoke-tokens');
     Route::resource('users', UserController::class)->except(['show']);
 });
 
