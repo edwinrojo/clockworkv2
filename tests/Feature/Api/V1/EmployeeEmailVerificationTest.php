@@ -4,6 +4,7 @@ namespace Tests\Feature\Api\V1;
 
 use App\Models\User;
 use App\Notifications\EmployeeEmailVerificationCode;
+use App\Services\Auth\EmployeeEmailVerificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
@@ -90,5 +91,19 @@ class EmployeeEmailVerificationTest extends TestCase
         ])->assertOk();
 
         Notification::assertNothingSent();
+    }
+
+    public function test_send_code_dispatches_notification_and_stores_code_in_cache(): void
+    {
+        Notification::fake();
+
+        $employee = User::factory()->employee()->unverified()->create([
+            'email' => 'mail.test@clockwork.test',
+        ]);
+
+        app(EmployeeEmailVerificationService::class)->sendCode($employee);
+
+        $this->assertTrue(Cache::has('employee_email_verify:'.$employee->id));
+        Notification::assertSentTo($employee, EmployeeEmailVerificationCode::class);
     }
 }
