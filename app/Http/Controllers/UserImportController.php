@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ImportEmployeesRequest;
+use App\Models\Department;
 use App\Models\User;
 use App\Services\Admin\EmployeeImportService;
 use App\Support\Admin\ActivityLogger;
+use App\Support\Admin\UserFormOptions;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,31 +22,34 @@ class UserImportController extends Controller
         $this->authorize('create', User::class);
 
         return Inertia::render('users/Import', [
+            ...UserFormOptions::for(request()->user()),
             'requiredColumns' => [
-                'employee_number',
                 'email',
                 'first_name',
                 'last_name',
-                'department',
-                'password',
+                'id_number',
             ],
-            'optionalColumns' => ['middle_name', 'suffix', 'is_active'],
+            'optionalColumns' => ['middle_name', 'suffix'],
             'importResult' => session('importResult'),
         ]);
     }
 
     public function store(ImportEmployeesRequest $request): RedirectResponse
     {
+        $department = Department::query()->findOrFail($request->validated('department_id'));
         $dryRun = $request->boolean('dry_run') || $request->input('mode') === 'preview';
 
         $result = $this->employeeImport->process(
             $request->file('file'),
+            $department,
             dryRun: $dryRun,
             updateExisting: $request->boolean('update_existing'),
         );
 
         if (! $dryRun) {
             ActivityLogger::log($request, 'employee_import', null, [
+                'department_id' => $department->id,
+                'department_name' => $department->name,
                 'created' => $result['created'],
                 'updated' => $result['updated'],
                 'failed' => count($result['failed']),
@@ -52,12 +57,14 @@ class UserImportController extends Controller
         }
 
         $message = $dryRun
-            ? __('Preview: :create create, :update update, :failed failed.', [
+            ? __('Preview for :department: :create create, :update update, :failed failed.', [
+                'department' => $department->name,
                 'create' => $result['created'],
                 'update' => $result['updated'],
                 'failed' => count($result['failed']),
             ])
-            : __(':create created, :update updated.', [
+            : __(':department: :create created, :update updated.', [
+                'department' => $department->name,
                 'create' => $result['created'],
                 'update' => $result['updated'],
             ]);

@@ -28,6 +28,7 @@ class ImportEmployeesRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'department_id' => ['required', 'ulid', Rule::exists('departments', 'id')],
             'file' => ['required', 'file', 'mimes:csv,txt', 'max:2048'],
             'dry_run' => ['boolean'],
             'update_existing' => ['boolean'],

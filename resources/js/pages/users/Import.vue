@@ -6,6 +6,11 @@ import { Button } from '@/components/ui/button';
 import { index } from '@/routes/users';
 import { template } from '@/routes/users/import';
 
+type DepartmentOption = {
+    id: string;
+    name: string;
+};
+
 type ImportFailure = {
     row: number;
     messages: string[];
@@ -26,6 +31,7 @@ type ImportResult = {
 };
 
 defineProps<{
+    departments: DepartmentOption[];
     requiredColumns: string[];
     optionalColumns: string[];
     importResult?: ImportResult | null;
@@ -48,7 +54,7 @@ defineOptions({
         <div class="flex items-center justify-between gap-4">
             <Heading
                 title="Import employees"
-                description="Upload a CSV to create employee accounts for mobile check-in"
+                description="Upload a department CSV to create employee accounts for mobile check-in"
             />
             <div class="flex gap-2">
                 <Button variant="outline" as-child>
@@ -63,7 +69,7 @@ defineOptions({
         <div
             class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
         >
-            <p class="text-sm font-medium">CSV format</p>
+            <p class="text-sm font-medium">CSV format (one department per file)</p>
             <p class="mt-1 text-sm text-muted-foreground">
                 Required columns:
                 <span class="font-mono">{{ requiredColumns.join(', ') }}</span>
@@ -73,8 +79,11 @@ defineOptions({
                 <span class="font-mono">{{ optionalColumns.join(', ') }}</span>
             </p>
             <p class="mt-2 text-xs text-muted-foreground">
-                Department names must match an existing department (case-insensitive).
-                Use preview to validate before importing. Maximum 500 rows per file.
+                Select the department below — all rows are assigned to it. Employee
+                numbers are generated automatically (e.g. HR-00001). The
+                <span class="font-mono">id_number</span> column sets each employee’s
+                initial mobile password. Use preview before importing. Maximum 500 rows
+                per file.
             </p>
         </div>
 
@@ -143,6 +152,35 @@ defineOptions({
             v-slot="{ errors, processing }"
         >
             <div class="grid gap-2">
+                <label for="department_id" class="text-sm font-medium"
+                    >Department</label
+                >
+                <select
+                    id="department_id"
+                    name="department_id"
+                    required
+                    class="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs"
+                >
+                    <option value="" disabled selected>
+                        Select department…
+                    </option>
+                    <option
+                        v-for="department in departments"
+                        :key="department.id"
+                        :value="department.id"
+                    >
+                        {{ department.name }}
+                    </option>
+                </select>
+                <p
+                    v-if="errors.department_id"
+                    class="text-sm text-destructive"
+                >
+                    {{ errors.department_id }}
+                </p>
+            </div>
+
+            <div class="grid gap-2">
                 <label for="file" class="text-sm font-medium">CSV file</label>
                 <input
                     id="file"
@@ -159,7 +197,7 @@ defineOptions({
 
             <label class="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="update_existing" value="1" />
-                Update existing employees (match by email or employee number)
+                Update existing employees in this department (match by email)
             </label>
 
             <label class="flex items-center gap-2 text-sm">
