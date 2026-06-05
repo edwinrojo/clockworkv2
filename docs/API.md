@@ -78,10 +78,11 @@ Employee login only (admin roles are rejected).
 
 - `422` — Invalid credentials
 - `403` — `ACCOUNT_INACTIVE`, `UNAUTHORIZED` (non-employee), or `EMAIL_NOT_VERIFIED`
+- `403` + `EMAIL_NOT_VERIFIED` — when credentials are valid but email is unverified, the server **automatically sends** a six-digit code. Response includes `data.verification_code_sent: true`.
 
 ### POST `/auth/email-verification/send`
 
-Resend a six-digit confirmation code to an **unverified** employee. Requires correct email and password (initial password is the government ID from HR import). Always returns the same message.
+Resend a six-digit confirmation code to an **unverified** employee. Requires correct email and password (initial password is the government ID from HR import). Check `data.verification_code_sent` — it is `true` only when credentials matched and the account is unverified.
 
 **Body**
 
@@ -97,12 +98,15 @@ Resend a six-digit confirmation code to an **unverified** employee. Requires cor
 ```json
 {
   "data": {
-    "message": "If your account needs verification, a new code has been sent to your email."
+    "message": "A new verification code has been sent to your email.",
+    "verification_code_sent": true
   }
 }
 ```
 
-A code is also emailed automatically when HR imports the employee.
+When credentials do not match or the account is already verified, `verification_code_sent` is `false` but the HTTP status is still `200` (no email enumeration).
+
+A code is also emailed automatically when HR imports the employee, and on login when credentials are correct but email is unverified.
 
 ### POST `/auth/email-verification/verify`
 

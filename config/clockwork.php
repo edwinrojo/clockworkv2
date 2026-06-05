@@ -43,6 +43,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Default mobile GPS accuracy (meters)
+    |--------------------------------------------------------------------------
+    |
+    | Applied when the app does not send an accuracy value on check-in. Mobile
+    | GPS is often off by 10–50 m even when maps look correct.
+    |
+    */
+
+    'default_gps_accuracy_meters' => (int) env('CLOCKWORK_DEFAULT_GPS_ACCURACY', 30),
+
+    /*
+    |--------------------------------------------------------------------------
     | Employee email verification code
     |--------------------------------------------------------------------------
     |

@@ -7,8 +7,13 @@ use Exception;
 
 class CheckInException extends Exception
 {
-    public function __construct(public CheckInErrorCode $errorCode)
-    {
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    public function __construct(
+        public CheckInErrorCode $errorCode,
+        public array $context = [],
+    ) {
         parent::__construct($errorCode->message());
     }
 }

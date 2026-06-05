@@ -15,9 +15,11 @@ class EmployeeEmailVerificationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_unverified_employee_cannot_login(): void
+    public function test_unverified_employee_cannot_login_and_receives_verification_code(): void
     {
-        User::factory()->employee()->unverified()->create([
+        Notification::fake();
+
+        $employee = User::factory()->employee()->unverified()->create([
             'email' => 'unverified@clockwork.test',
         ]);
 
@@ -26,7 +28,10 @@ class EmployeeEmailVerificationTest extends TestCase
             'password' => 'password',
         ])
             ->assertForbidden()
-            ->assertJsonPath('code', 'EMAIL_NOT_VERIFIED');
+            ->assertJsonPath('code', 'EMAIL_NOT_VERIFIED')
+            ->assertJsonPath('data.verification_code_sent', true);
+
+        Notification::assertSentTo($employee, EmployeeEmailVerificationCode::class);
     }
 
     public function test_employee_can_verify_email_with_code_and_then_login(): void
@@ -69,9 +74,10 @@ class EmployeeEmailVerificationTest extends TestCase
             'password' => 'password',
         ])
             ->assertOk()
+            ->assertJsonPath('data.verification_code_sent', true)
             ->assertJsonPath(
                 'data.message',
-                'If your account needs verification, a new code has been sent to your email.',
+                'A new verification code has been sent to your email.',
             );
 
         Notification::assertSentTo($employee, EmployeeEmailVerificationCode::class);
@@ -88,7 +94,9 @@ class EmployeeEmailVerificationTest extends TestCase
         $this->postJson('/api/v1/auth/email-verification/send', [
             'email' => 'resend@clockwork.test',
             'password' => 'wrong-password',
-        ])->assertOk();
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.verification_code_sent', false);
 
         Notification::assertNothingSent();
     }

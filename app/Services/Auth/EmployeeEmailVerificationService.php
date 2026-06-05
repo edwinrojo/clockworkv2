@@ -10,14 +10,10 @@ use Illuminate\Validation\ValidationException;
 
 class EmployeeEmailVerificationService
 {
-    public function sendCode(User $user): void
+    public function sendCode(User $user): bool
     {
-        if (! $user->isEmployee() || ! $user->is_active) {
-            return;
-        }
-
-        if ($user->hasVerifiedEmail()) {
-            return;
+        if (! $user->isEmployee() || ! $user->is_active || $user->hasVerifiedEmail()) {
+            return false;
         }
 
         $code = $this->generateCode();
@@ -30,6 +26,8 @@ class EmployeeEmailVerificationService
         );
 
         $user->notify(new EmployeeEmailVerificationCode($code, $ttlMinutes));
+
+        return true;
     }
 
     public function verify(string $email, string $code): User

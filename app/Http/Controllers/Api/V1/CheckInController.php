@@ -27,10 +27,14 @@ class CheckInController extends Controller
                 idempotencyKey: $request->string('idempotency_key')->toString() ?: null,
             );
         } catch (CheckInException $exception) {
+            $debug = config('app.debug') ? ['debug' => $exception->context] : [];
+
             return ApiResponse::error(
                 $exception->getMessage(),
                 422,
                 $exception->errorCode->value,
+                [],
+                $debug,
             );
         }
 

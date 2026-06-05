@@ -19,16 +19,27 @@ class ApiResponse
     /**
      * @param  array<string, mixed>  $errors
      */
+    /**
+     * @param  array<string, mixed>  $errors
+     * @param  array<string, mixed>  $data
+     */
     public static function error(
         string $message,
         int $status = 400,
         ?string $code = null,
         array $errors = [],
+        array $data = [],
     ): JsonResponse {
-        return response()->json([
+        $payload = [
             'message' => $message,
             'code' => $code,
             'errors' => (object) $errors,
-        ], $status);
+        ];
+
+        if ($data !== []) {
+            $payload['data'] = $data;
+        }
+
+        return response()->json($payload, $status);
     }
 }

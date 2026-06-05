@@ -52,10 +52,16 @@ class AuthController extends Controller
         }
 
         if (! $user->hasVerifiedEmail()) {
+            $codeSent = $this->emailVerification->sendCode($user);
+
             return ApiResponse::error(
-                CheckInErrorCode::EmailNotVerified->message(),
+                $codeSent
+                    ? __('Confirm your email with the verification code we just sent.')
+                    : CheckInErrorCode::EmailNotVerified->message(),
                 403,
                 CheckInErrorCode::EmailNotVerified->value,
+                [],
+                ['verification_code_sent' => $codeSent],
             );
         }
 
@@ -139,18 +145,22 @@ class AuthController extends Controller
             ->where('email', $request->validated('email'))
             ->first();
 
+        $codeSent = false;
+
         if (
             $user !== null
             && $user->isEmployee()
             && $user->is_active
             && Hash::check($request->validated('password'), $user->password)
-            && ! $user->hasVerifiedEmail()
         ) {
-            $this->emailVerification->sendCode($user);
+            $codeSent = $this->emailVerification->sendCode($user);
         }
 
         return ApiResponse::success([
-            'message' => __('If your account needs verification, a new code has been sent to your email.'),
+            'message' => $codeSent
+                ? __('A new verification code has been sent to your email.')
+                : __('If your account needs verification, a new code has been sent to your email.'),
+            'verification_code_sent' => $codeSent,
         ]);
     }
 

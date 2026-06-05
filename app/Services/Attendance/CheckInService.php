@@ -70,8 +70,21 @@ class CheckInService
 
         $venue = $this->venueForGeofenceCheck($event->venue);
 
-        if (! $this->geofenceValidator->isWithin($venue, $latitude, $longitude, $accuracyMeters)) {
-            throw new CheckInException(CheckInErrorCode::OutsideGeofence);
+        $geofence = $this->geofenceValidator->evaluate($venue, $latitude, $longitude, $accuracyMeters);
+
+        if (! $geofence['within']) {
+            throw new CheckInException(CheckInErrorCode::OutsideGeofence, [
+                'geofence' => $geofence,
+                'submitted' => [
+                    'latitude' => $latitude,
+                    'longitude' => $longitude,
+                    'accuracy' => $accuracyMeters,
+                ],
+                'venue' => [
+                    'latitude' => (float) $venue->latitude,
+                    'longitude' => (float) $venue->longitude,
+                ],
+            ]);
         }
 
         $checkedInAt = now();

@@ -8,16 +8,35 @@ class GeofenceValidator
 {
     public function isWithin(Venue $venue, float $latitude, float $longitude, ?float $accuracyMeters = null): bool
     {
+        return $this->evaluate($venue, $latitude, $longitude, $accuracyMeters)['within'];
+    }
+
+    /**
+     * @return array{
+     *     within: bool,
+     *     mode: string,
+     *     distance_meters: float|null,
+     *     allowed_meters: float|null,
+     *     tolerance_meters: float
+     * }
+     */
+    public function evaluate(Venue $venue, float $latitude, float $longitude, ?float $accuracyMeters = null): array
+    {
         $toleranceMeters = (float) $venue->accuracy_buffer_meters;
 
-        if ($accuracyMeters !== null) {
-            $toleranceMeters += (float) $accuracyMeters;
-        }
+        $effectiveAccuracy = $accuracyMeters ?? (float) config('clockwork.default_gps_accuracy_meters', 30);
+        $toleranceMeters += $effectiveAccuracy;
 
         $polygon = $venue->geofence_polygon;
 
         if (is_array($polygon) && $polygon !== []) {
-            return $this->pointInPolygon($latitude, $longitude, $polygon);
+            return [
+                'within' => $this->pointInPolygon($latitude, $longitude, $polygon),
+                'mode' => 'polygon',
+                'distance_meters' => null,
+                'allowed_meters' => null,
+                'tolerance_meters' => $toleranceMeters,
+            ];
         }
 
         if ($venue->geofence_radius_meters !== null) {
@@ -27,11 +46,24 @@ class GeofenceValidator
                 $latitude,
                 $longitude,
             );
+            $allowed = (float) $venue->geofence_radius_meters + $toleranceMeters;
 
-            return $distance <= ((float) $venue->geofence_radius_meters + $toleranceMeters);
+            return [
+                'within' => $distance <= $allowed,
+                'mode' => 'radius',
+                'distance_meters' => round($distance, 1),
+                'allowed_meters' => round($allowed, 1),
+                'tolerance_meters' => $toleranceMeters,
+            ];
         }
 
-        return false;
+        return [
+            'within' => false,
+            'mode' => 'none',
+            'distance_meters' => null,
+            'allowed_meters' => null,
+            'tolerance_meters' => $toleranceMeters,
+        ];
     }
 
     /**
