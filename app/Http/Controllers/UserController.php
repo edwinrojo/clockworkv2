@@ -8,6 +8,7 @@ use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
 use App\Notifications\MobileResetPassword;
+use App\Services\Auth\EmployeeEmailVerificationService;
 use App\Support\Admin\ActivityLogger;
 use App\Support\Admin\UserFormOptions;
 use Illuminate\Http\RedirectResponse;
@@ -19,6 +20,8 @@ use Inertia\Response;
 
 class UserController extends Controller
 {
+    public function __construct(private EmployeeEmailVerificationService $emailVerification) {}
+
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', User::class);
@@ -139,6 +142,34 @@ class UserController extends Controller
         return back();
     }
 
+    public function sendEmailVerification(Request $request, User $user): RedirectResponse
+    {
+        $this->authorize('update', $user);
+
+        if (! $user->isEmployee() || ! $user->is_active) {
+            return back()->withErrors([
+                'user' => __('Verification codes can only be sent to active employees.'),
+            ]);
+        }
+
+        if ($user->hasVerifiedEmail()) {
+            return back()->withErrors([
+                'user' => __('This employee has already confirmed their email.'),
+            ]);
+        }
+
+        $this->emailVerification->sendCode($user);
+
+        ActivityLogger::log($request, 'employee_email_verification_sent', $user);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('Verification code sent to :email.', ['email' => $user->email]),
+        ]);
+
+        return back();
+    }
+
     public function sendPasswordReset(Request $request, User $user): RedirectResponse
     {
         $this->authorize('update', $user);
@@ -203,6 +234,7 @@ class UserController extends Controller
             'department_id' => $user->department_id,
             'department_name' => $user->department?->name,
             'is_active' => $user->is_active,
+            'email_verified_at' => $user->email_verified_at?->toIso8601String(),
             'can' => [
                 'update' => $request->user()?->can('update', $user) ?? false,
                 'delete' => $request->user()?->can('delete', $user) ?? false,

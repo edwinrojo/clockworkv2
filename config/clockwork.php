@@ -41,4 +41,18 @@ return [
 
     'venue_geofence_cache_seconds' => (int) env('CLOCKWORK_VENUE_GEOFENCE_CACHE_SECONDS', 300),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Employee email verification code
+    |--------------------------------------------------------------------------
+    |
+    | Six-digit codes sent to employees after HR import or on resend. Required
+    | before mobile login. TTL is in minutes.
+    |
+    */
+
+    'email_verification_code_ttl_minutes' => (int) env('CLOCKWORK_EMAIL_VERIFICATION_TTL', 30),
+
+    'email_verification_code_length' => 6,
+
 ];

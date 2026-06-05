@@ -92,6 +92,11 @@ class User extends Authenticatable implements PasskeyUser
         return $this->role === UserRole::Employee;
     }
 
+    public function hasVerifiedEmail(): bool
+    {
+        return $this->email_verified_at !== null;
+    }
+
     public function canAccessAdmin(): bool
     {
         return $this->role?->canAccessAdmin() ?? false;

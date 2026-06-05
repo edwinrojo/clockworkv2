@@ -77,7 +77,60 @@ Employee login only (admin roles are rejected).
 **Errors**
 
 - `422` — Invalid credentials
-- `403` — `ACCOUNT_INACTIVE` or `UNAUTHORIZED` (non-employee)
+- `403` — `ACCOUNT_INACTIVE`, `UNAUTHORIZED` (non-employee), or `EMAIL_NOT_VERIFIED`
+
+### POST `/auth/email-verification/send`
+
+Resend a six-digit confirmation code to an **unverified** employee. Requires correct email and password (initial password is the government ID from HR import). Always returns the same message.
+
+**Body**
+
+```json
+{
+  "email": "employee@example.com",
+  "password": "1234567890"
+}
+```
+
+**Success `200`**
+
+```json
+{
+  "data": {
+    "message": "If your account needs verification, a new code has been sent to your email."
+  }
+}
+```
+
+A code is also emailed automatically when HR imports the employee.
+
+### POST `/auth/email-verification/verify`
+
+Confirm the employee’s email before first login.
+
+**Body**
+
+```json
+{
+  "email": "employee@example.com",
+  "code": "123456"
+}
+```
+
+**Success `200`**
+
+```json
+{
+  "data": {
+    "message": "Email confirmed. You can sign in now.",
+    "user": { "id": "...", "email": "...", "email_verified_at": "..." }
+  }
+}
+```
+
+**Errors**
+
+- `422` — Invalid or expired code
 
 ### POST `/auth/forgot-password`
 
@@ -273,6 +326,7 @@ If the list is empty: confirm session is **Active** (not Paused), and that check
 | `EVENT_NOT_ACTIVE` | Session/window not open |
 | `UNAUTHORIZED` | Not an active employee |
 | `ACCOUNT_INACTIVE` | Employee account disabled |
+| `EMAIL_NOT_VERIFIED` | Email not confirmed with verification code |
 
 ---
 
@@ -349,12 +403,13 @@ Ensure `APP_URL` in Laravel `.env` matches what the phone can reach.
 
 1. **Cold start** — read token from secure storage; if present, call `GET /profile`.
 2. **401 on any request** — clear token and show login (token revoked, password reset, or expired).
-3. **Login** — `POST /auth/login` with `email`, `password`, and stable `device_name` (asset tag or device model).
-4. **Store token** — save the full string from `data.token` (format `id|plainTextToken`). Send as:
+3. **First-time onboarding** — HR import emails a six-digit code. Screen: email + code → `POST /auth/email-verification/verify`. Resend: `POST /auth/email-verification/send` with email + ID number (initial password).
+4. **Login** — `POST /auth/login` with `email`, `password` (ID number until changed), and stable `device_name` (asset tag or device model). `403` + `EMAIL_NOT_VERIFIED` → show verification screen.
+5. **Store token** — save the full string from `data.token` (format `id|plainTextToken`). Send as:
    ```
    Authorization: Bearer {data.token}
    ```
-5. **Logout** — `POST /auth/logout` then delete local token.
+6. **Logout** — `POST /auth/logout` then delete local token.
 
 New login on the same account **revokes all previous tokens** on the server (one employee, one device).
 
@@ -374,14 +429,15 @@ Mail must work in the environment where you test (`MAIL_*` in `.env`).
 
 | Phase | Screen / feature | API |
 |-------|------------------|-----|
-| 1 | Login + secure token | `POST /auth/login` |
-| 2 | Splash / session restore | `GET /profile` |
-| 3 | Event list (empty state OK) | `GET /events` |
-| 4 | QR scanner → check-in | `POST /check-in` |
-| 5 | Success / error UX from `code` | — |
-| 6 | Attendance history | `GET /attendances` |
-| 7 | Forgot / reset password | `POST /auth/forgot-password`, `POST /auth/reset-password` |
-| 8 | Logout | `POST /auth/logout` |
+| 1 | Email verification (first launch) | `POST /auth/email-verification/verify`, `POST /auth/email-verification/send` |
+| 2 | Login + secure token | `POST /auth/login` |
+| 3 | Splash / session restore | `GET /profile` |
+| 4 | Event list (empty state OK) | `GET /events` |
+| 5 | QR scanner → check-in | `POST /check-in` |
+| 6 | Success / error UX from `code` | — |
+| 7 | Attendance history | `GET /attendances` |
+| 8 | Forgot / reset password | `POST /auth/forgot-password`, `POST /auth/reset-password` |
+| 9 | Logout | `POST /auth/logout` |
 
 ### Check-in request (implementation details)
 
@@ -400,9 +456,10 @@ Mail must work in the environment where you test (`MAIL_*` in `.env`).
 | `ALREADY_CHECKED_IN` | Show success state (already recorded) |
 | `EVENT_NOT_ACTIVE` | Explain session not started or window closed |
 | `ACCOUNT_INACTIVE` | Contact HR; block app use |
+| `EMAIL_NOT_VERIFIED` | Show verification screen; offer resend with email + password |
 | `UNAUTHORIZED` | Force logout |
 
-Login errors use `403` with `code` `UNAUTHORIZED` or `ACCOUNT_INACTIVE`.
+Login errors use `403` with `code` `UNAUTHORIZED`, `ACCOUNT_INACTIVE`, or `EMAIL_NOT_VERIFIED`.
 
 ### End-to-end test script (manual)
 

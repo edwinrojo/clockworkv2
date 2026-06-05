@@ -11,6 +11,7 @@ enum CheckInErrorCode: string
     case Unauthorized = 'UNAUTHORIZED';
     case InvalidQr = 'INVALID_QR';
     case AccountInactive = 'ACCOUNT_INACTIVE';
+    case EmailNotVerified = 'EMAIL_NOT_VERIFIED';
 
     public function message(): string
     {
@@ -22,6 +23,7 @@ enum CheckInErrorCode: string
             self::Unauthorized => 'You are not authorized to check in.',
             self::InvalidQr => 'Invalid QR code.',
             self::AccountInactive => 'Your account is inactive.',
+            self::EmailNotVerified => 'Confirm your email with the verification code we sent.',
         };
     }
 }

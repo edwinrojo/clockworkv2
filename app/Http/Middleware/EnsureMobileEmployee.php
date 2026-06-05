@@ -37,6 +37,14 @@ class EnsureMobileEmployee
             );
         }
 
+        if (! $user->hasVerifiedEmail()) {
+            return ApiResponse::error(
+                CheckInErrorCode::EmailNotVerified->message(),
+                403,
+                CheckInErrorCode::EmailNotVerified->value,
+            );
+        }
+
         return $next($request);
     }
 }

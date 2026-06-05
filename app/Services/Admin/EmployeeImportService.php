@@ -5,6 +5,7 @@ namespace App\Services\Admin;
 use App\Enums\UserRole;
 use App\Models\Department;
 use App\Models\User;
+use App\Services\Auth\EmployeeEmailVerificationService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -26,7 +27,10 @@ class EmployeeImportService
         'id_number',
     ];
 
-    public function __construct(private EmployeeNumberGenerator $employeeNumbers) {}
+    public function __construct(
+        private EmployeeNumberGenerator $employeeNumbers,
+        private EmployeeEmailVerificationService $emailVerification,
+    ) {}
 
     /**
      * @return array{
@@ -249,7 +253,17 @@ class EmployeeImportService
         ];
 
         if ($existing !== null) {
+            $previousEmail = $existing->email;
+
             $existing->update($attributes);
+
+            if ($existing->email !== $previousEmail) {
+                $existing->forceFill(['email_verified_at' => null])->save();
+            }
+
+            if (! $existing->hasVerifiedEmail()) {
+                $this->emailVerification->sendCode($existing->refresh());
+            }
 
             return [
                 'action' => 'update',
@@ -257,11 +271,14 @@ class EmployeeImportService
             ];
         }
 
-        User::query()->create([
+        $user = User::query()->create([
             ...$attributes,
             'employee_number' => $employeeNumber,
             'role' => UserRole::Employee,
+            'email_verified_at' => null,
         ]);
+
+        $this->emailVerification->sendCode($user);
 
         return [
             'action' => 'create',

@@ -82,8 +82,9 @@ defineOptions({
                 Select the department below — all rows are assigned to it. Employee
                 numbers are generated automatically (e.g. HR-00001). The
                 <span class="font-mono">id_number</span> column sets each employee’s
-                initial mobile password. Use preview before importing. Maximum 500 rows
-                per file.
+                initial mobile password. A six-digit email confirmation code is sent
+                on import; employees must confirm before signing in. Use preview before
+                importing. Maximum 500 rows per file.
             </p>
         </div>
 

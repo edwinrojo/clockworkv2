@@ -17,6 +17,12 @@ Route::prefix('v1')->group(function (): void {
     Route::post('auth/reset-password', [AuthController::class, 'resetPassword'])
         ->middleware('throttle:api-password-reset');
 
+    Route::post('auth/email-verification/send', [AuthController::class, 'sendEmailVerificationCode'])
+        ->middleware('throttle:api-email-verification');
+
+    Route::post('auth/email-verification/verify', [AuthController::class, 'verifyEmail'])
+        ->middleware('throttle:api-email-verification');
+
     Route::middleware(['auth:sanctum', 'mobile.employee', 'throttle:api-mobile'])->group(function (): void {
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('profile', [ProfileController::class, 'show']);

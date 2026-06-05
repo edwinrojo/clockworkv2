@@ -117,6 +117,7 @@ export type UserRow = {
     department_id: string | null;
     department_name: string | null;
     is_active: boolean;
+    email_verified_at: string | null;
     can: UserRowAbilities;
 };
 

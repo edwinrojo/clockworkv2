@@ -56,6 +56,7 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::post('users/import', [UserImportController::class, 'store'])->name('users.import.store');
     Route::get('users/import/template', [UserImportController::class, 'template'])->name('users.import.template');
     Route::post('users/{user}/revoke-tokens', [UserController::class, 'revokeTokens'])->name('users.revoke-tokens');
+    Route::post('users/{user}/send-email-verification', [UserController::class, 'sendEmailVerification'])->name('users.send-email-verification');
     Route::post('users/{user}/send-password-reset', [UserController::class, 'sendPasswordReset'])->name('users.send-password-reset');
     Route::post('users/{user}/set-password', [UserController::class, 'setPassword'])->name('users.set-password');
     Route::resource('users', UserController::class)->except(['show']);

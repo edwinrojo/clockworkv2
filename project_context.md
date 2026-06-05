@@ -273,7 +273,7 @@ REST JSON API at `/api/v1` (Bearer token; employees only):
 - **Database tables:** `docs/DATABASE.md`
 - **Password reset:** `POST /api/v1/auth/forgot-password`, `POST /api/v1/auth/reset-password` (email deep link via `CLOCKWORK_MOBILE_PASSWORD_RESET_URL`).
 - **One active token:** login revokes all prior Sanctum tokens; admin can revoke from user edit screen.
-- **HR bulk import:** CSV at `/users/import` — one department per upload; columns `email`, `first_name`, `middle_name`, `last_name`, `suffix`, `id_number` (initial password); auto `employee_number` (e.g. `HR-00001` from department `code`).
+- **HR bulk import:** CSV at `/users/import` — one department per upload; columns `email`, `first_name`, `middle_name`, `last_name`, `suffix`, `id_number` (initial password); auto `employee_number` (e.g. `HR-00001` from department `code`). Sends six-digit email verification code; mobile login blocked until `POST /auth/email-verification/verify`.
 - **Scale:** composite indexes on `users` and `event_sessions`; venue geofence cache during check-in (`CLOCKWORK_VENUE_GEOFENCE_CACHE_SECONDS`).
 
 ### 9. Real-Time & Live Operations Dashboard — **implemented**

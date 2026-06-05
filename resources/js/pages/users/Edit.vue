@@ -42,6 +42,33 @@ defineOptions({
         />
 
         <div
+            v-if="managedUser.can.managePassword && !managedUser.email_verified_at"
+            class="max-w-xl space-y-4 rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+        >
+            <p class="text-sm font-medium">Email verification</p>
+            <p class="text-sm text-muted-foreground">
+                Send a six-digit confirmation code to the employee’s email.
+                They must enter it in the mobile app before they can sign in.
+            </p>
+            <Form
+                :action="
+                    UserController.sendEmailVerification.url(managedUser.id)
+                "
+                method="post"
+                v-slot="{ processing: sendingVerification }"
+            >
+                <Button
+                    type="submit"
+                    variant="outline"
+                    size="sm"
+                    :disabled="sendingVerification"
+                >
+                    Send verification code
+                </Button>
+            </Form>
+        </div>
+
+        <div
             v-if="managedUser.can.managePassword"
             class="max-w-xl space-y-4 rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
         >

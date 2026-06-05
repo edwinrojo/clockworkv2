@@ -7,9 +7,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\ForgotPasswordRequest;
 use App\Http\Requests\Api\V1\LoginRequest;
 use App\Http\Requests\Api\V1\ResetPasswordRequest;
+use App\Http\Requests\Api\V1\SendEmailVerificationCodeRequest;
+use App\Http\Requests\Api\V1\VerifyEmailRequest;
 use App\Http\Resources\Api\V1\UserResource;
 use App\Models\User;
 use App\Notifications\MobileResetPassword;
+use App\Services\Auth\EmployeeEmailVerificationService;
 use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +23,8 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
+    public function __construct(private EmployeeEmailVerificationService $emailVerification) {}
+
     public function login(LoginRequest $request): JsonResponse
     {
         $user = User::query()->where('email', $request->validated('email'))->first();
@@ -43,6 +48,14 @@ class AuthController extends Controller
                 CheckInErrorCode::Unauthorized->message(),
                 403,
                 CheckInErrorCode::Unauthorized->value,
+            );
+        }
+
+        if (! $user->hasVerifiedEmail()) {
+            return ApiResponse::error(
+                CheckInErrorCode::EmailNotVerified->message(),
+                403,
+                CheckInErrorCode::EmailNotVerified->value,
             );
         }
 
@@ -117,6 +130,40 @@ class AuthController extends Controller
 
         return ApiResponse::success([
             'message' => __('Your password has been reset. Please sign in on your device.'),
+        ]);
+    }
+
+    public function sendEmailVerificationCode(SendEmailVerificationCodeRequest $request): JsonResponse
+    {
+        $user = User::query()
+            ->where('email', $request->validated('email'))
+            ->first();
+
+        if (
+            $user !== null
+            && $user->isEmployee()
+            && $user->is_active
+            && Hash::check($request->validated('password'), $user->password)
+            && ! $user->hasVerifiedEmail()
+        ) {
+            $this->emailVerification->sendCode($user);
+        }
+
+        return ApiResponse::success([
+            'message' => __('If your account needs verification, a new code has been sent to your email.'),
+        ]);
+    }
+
+    public function verifyEmail(VerifyEmailRequest $request): JsonResponse
+    {
+        $user = $this->emailVerification->verify(
+            $request->validated('email'),
+            $request->validated('code'),
+        );
+
+        return ApiResponse::success([
+            'message' => __('Email confirmed. You can sign in now.'),
+            'user' => new UserResource($user),
         ]);
     }
 }

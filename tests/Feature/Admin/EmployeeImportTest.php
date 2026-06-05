@@ -5,9 +5,11 @@ namespace Tests\Feature\Admin;
 use App\Enums\UserRole;
 use App\Models\Department;
 use App\Models\User;
+use App\Notifications\EmployeeEmailVerificationCode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class EmployeeImportTest extends TestCase
@@ -16,6 +18,8 @@ class EmployeeImportTest extends TestCase
 
     public function test_super_admin_can_import_employees_for_a_department(): void
     {
+        Notification::fake();
+
         $admin = User::factory()->superAdmin()->create();
         $department = Department::factory()->create([
             'name' => 'Human Resources',
@@ -53,6 +57,13 @@ class EmployeeImportTest extends TestCase
         $employee = User::query()->where('email', 'imported.one@clockwork.test')->first();
         $this->assertNotNull($employee);
         $this->assertTrue(Hash::check('1234567890', (string) $employee->password));
+        $this->assertNull($employee->email_verified_at);
+
+        Notification::assertSentTo($employee, EmployeeEmailVerificationCode::class);
+        Notification::assertSentTo(
+            User::query()->where('email', 'imported.two@clockwork.test')->first(),
+            EmployeeEmailVerificationCode::class,
+        );
     }
 
     public function test_import_requires_department_selection(): void

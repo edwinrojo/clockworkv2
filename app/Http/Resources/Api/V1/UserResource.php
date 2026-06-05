@@ -27,6 +27,7 @@ class UserResource extends JsonResource
             'employee_number' => $this->employee_number,
             'department_id' => $this->department_id,
             'is_active' => $this->is_active,
+            'email_verified_at' => $this->email_verified_at?->toIso8601String(),
         ];
     }
 }
