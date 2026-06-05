@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\Attendance;
 use App\Models\Department;
 use App\Models\Event;
+use App\Models\EventDate;
 use App\Models\EventSession;
 use App\Models\QrToken;
 use App\Models\User;
@@ -58,13 +59,16 @@ class ClockworkSchemaTest extends TestCase
         $this->assertSame(UserRole::Employee, $employee->role);
     }
 
-    public function test_duplicate_attendance_per_event_is_rejected(): void
+    public function test_duplicate_attendance_per_event_date_is_rejected(): void
     {
         $employee = User::factory()->employee()->create();
         $event = Event::factory()->live()->create();
+        $eventDate = $event->dates()->first();
+        $this->assertNotNull($eventDate);
 
         Attendance::factory()->create([
             'event_id' => $event->id,
+            'event_date_id' => $eventDate->id,
             'user_id' => $employee->id,
             'event_session_id' => null,
         ]);
@@ -73,9 +77,34 @@ class ClockworkSchemaTest extends TestCase
 
         Attendance::factory()->create([
             'event_id' => $event->id,
+            'event_date_id' => $eventDate->id,
             'user_id' => $employee->id,
             'event_session_id' => null,
         ]);
+    }
+
+    public function test_attendance_can_exist_on_multiple_dates_for_same_event(): void
+    {
+        $employee = User::factory()->employee()->create();
+        $event = Event::factory()->live()->create();
+        $event->dates()->delete();
+
+        $dayOne = EventDate::factory()->for($event)->forDate(today()->subDay()->toDateString())->create();
+        $dayTwo = EventDate::factory()->for($event)->forDate(today()->toDateString())->create();
+
+        Attendance::factory()->create([
+            'event_id' => $event->id,
+            'event_date_id' => $dayOne->id,
+            'user_id' => $employee->id,
+        ]);
+
+        Attendance::factory()->create([
+            'event_id' => $event->id,
+            'event_date_id' => $dayTwo->id,
+            'user_id' => $employee->id,
+        ]);
+
+        $this->assertSame(2, Attendance::query()->where('user_id', $employee->id)->count());
     }
 
     public function test_event_generates_display_secret_on_create(): void

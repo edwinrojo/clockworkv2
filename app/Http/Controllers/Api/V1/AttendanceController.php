@@ -16,7 +16,7 @@ class AttendanceController extends Controller
 
         $attendances = Attendance::query()
             ->where('user_id', $request->user()->id)
-            ->with(['event.venue'])
+            ->with(['event.venue', 'eventDate'])
             ->orderByDesc('checked_in_at')
             ->paginate($perPage);
 

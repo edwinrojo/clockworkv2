@@ -20,6 +20,10 @@ class EventResource extends JsonResource
             ? $this->sessions->first()
             : null;
 
+        $todaySchedule = $this->relationLoaded('dates')
+            ? $this->dates->firstWhere(fn ($date) => $date->event_date->isToday())
+            : null;
+
         return [
             'id' => $this->id,
             'title' => $this->title,
@@ -28,8 +32,9 @@ class EventResource extends JsonResource
             'status' => $this->status->value,
             'starts_at' => $this->starts_at?->toIso8601String(),
             'ends_at' => $this->ends_at?->toIso8601String(),
-            'check_in_opens_at' => $this->check_in_opens_at?->toIso8601String(),
-            'check_in_closes_at' => $this->check_in_closes_at?->toIso8601String(),
+            'check_in_opens_at' => $todaySchedule?->checkInOpensAt()->toIso8601String(),
+            'check_in_closes_at' => $todaySchedule?->checkOutOpensAt()->toIso8601String(),
+            'late_cutoff_at' => $todaySchedule?->lateCutoffAt()->toIso8601String(),
             'active_session_id' => $activeSession?->id,
             'venue' => [
                 'id' => $this->venue->id,

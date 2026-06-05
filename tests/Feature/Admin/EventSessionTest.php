@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Enums\EventSessionStatus;
 use App\Enums\EventStatus;
 use App\Models\Event;
+use App\Models\EventDate;
 use App\Models\EventSession;
 use App\Models\User;
 use App\Services\Qr\QrTokenService;
@@ -21,7 +22,9 @@ class EventSessionTest extends TestCase
     public function test_event_manager_can_start_pause_resume_and_end_session(): void
     {
         $manager = User::factory()->eventManager()->create();
-        $event = Event::factory()->create(['status' => EventStatus::Scheduled]);
+        $event = Event::factory()->scheduledForToday()->create([
+            'status' => EventStatus::Scheduled,
+        ]);
 
         $this->actingAs($manager)
             ->post(route('events.session.start', $event))
@@ -57,25 +60,40 @@ class EventSessionTest extends TestCase
         $this->assertSame(EventStatus::Closed, $event->fresh()->status);
     }
 
-    public function test_starting_session_opens_future_check_in_window_for_mobile_api(): void
+    public function test_manual_start_is_blocked_before_check_in_opens(): void
+    {
+        $manager = User::factory()->eventManager()->create();
+        $event = Event::factory()->create([
+            'status' => EventStatus::Scheduled,
+            'starts_at' => today()->startOfDay(),
+            'ends_at' => today()->endOfDay(),
+        ]);
+        $event->dates()->delete();
+        EventDate::factory()->for($event)->create([
+            'event_date' => today(),
+            'check_in_time' => now()->addHour()->format('H:i:s'),
+            'check_out_time' => '17:00:00',
+            'late_cutoff_time' => now()->addHours(2)->format('H:i:s'),
+        ]);
+
+        $this->actingAs($manager)
+            ->post(route('events.session.start', $event))
+            ->assertRedirect()
+            ->assertSessionHasErrors('session');
+    }
+
+    public function test_starting_session_makes_event_available_for_mobile_api(): void
     {
         $manager = User::factory()->eventManager()->create();
         $employee = User::factory()->employee()->create();
 
-        $event = Event::factory()->create([
+        $event = Event::factory()->scheduledForToday()->create([
             'status' => EventStatus::Scheduled,
-            'check_in_opens_at' => now()->addWeek(),
-            'check_in_closes_at' => now()->addWeek()->addHours(2),
         ]);
 
         $this->actingAs($manager)
             ->post(route('events.session.start', $event))
             ->assertRedirect(route('events.live', $event));
-
-        $event->refresh();
-
-        $this->assertTrue($event->check_in_opens_at->lte(now()));
-        $this->assertTrue($event->check_in_closes_at->gte(now()));
 
         Sanctum::actingAs($employee);
 
@@ -132,7 +150,7 @@ class EventSessionTest extends TestCase
     public function test_viewer_cannot_start_session(): void
     {
         $viewer = User::factory()->viewer()->create();
-        $event = Event::factory()->create();
+        $event = Event::factory()->scheduledForToday()->create();
 
         $this->actingAs($viewer)
             ->post(route('events.session.start', $event))

@@ -6,6 +6,7 @@ use App\Enums\AttendanceSource;
 use App\Enums\AttendanceStatus;
 use App\Models\Attendance;
 use App\Models\Event;
+use App\Models\EventDate;
 use App\Models\EventSession;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -16,6 +17,36 @@ use Illuminate\Support\Str;
  */
 class AttendanceFactory extends Factory
 {
+    public function configure(): static
+    {
+        return $this->afterMaking(function (Attendance $attendance): void {
+            if ($attendance->event_date_id !== null) {
+                return;
+            }
+
+            if ($attendance->event_session_id !== null) {
+                $session = EventSession::query()->find($attendance->event_session_id);
+
+                if ($session?->event_date_id !== null) {
+                    $attendance->event_date_id = $session->event_date_id;
+
+                    return;
+                }
+            }
+
+            if ($attendance->event_id !== null) {
+                $eventDateId = EventDate::query()
+                    ->where('event_id', $attendance->event_id)
+                    ->whereDate('event_date', $attendance->checked_in_at ?? today())
+                    ->value('id');
+
+                if ($eventDateId !== null) {
+                    $attendance->event_date_id = $eventDateId;
+                }
+            }
+        });
+    }
+
     /**
      * @return array<string, mixed>
      */

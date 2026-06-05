@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable([
     'event_id',
     'event_session_id',
+    'event_date_id',
     'user_id',
     'checked_in_at',
     'latitude',
@@ -54,6 +55,11 @@ class Attendance extends Model
     public function eventSession(): BelongsTo
     {
         return $this->belongsTo(EventSession::class);
+    }
+
+    public function eventDate(): BelongsTo
+    {
+        return $this->belongsTo(EventDate::class);
     }
 
     public function user(): BelongsTo

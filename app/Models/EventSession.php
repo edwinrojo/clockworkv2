@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'event_id',
+    'event_date_id',
     'started_by',
     'status',
     'started_at',
@@ -35,6 +36,11 @@ class EventSession extends Model
     public function event(): BelongsTo
     {
         return $this->belongsTo(Event::class);
+    }
+
+    public function eventDate(): BelongsTo
+    {
+        return $this->belongsTo(EventDate::class);
     }
 
     public function starter(): BelongsTo

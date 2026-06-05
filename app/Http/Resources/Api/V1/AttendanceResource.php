@@ -19,6 +19,10 @@ class AttendanceResource extends JsonResource
         return [
             'id' => $this->id,
             'event_id' => $this->event_id,
+            'event_date_id' => $this->event_date_id,
+            'event_date' => $this->relationLoaded('eventDate')
+                ? $this->eventDate?->event_date->format('Y-m-d')
+                : null,
             'event_title' => $this->event->title,
             'venue_name' => $this->event->venue->name,
             'checked_in_at' => $this->checked_in_at->toIso8601String(),

@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreEventRequest;
 use App\Http\Requests\UpdateEventRequest;
 use App\Models\Event;
+use App\Services\Event\EventScheduleService;
 use App\Support\Admin\EventFormOptions;
-use Carbon\CarbonInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -14,12 +14,15 @@ use Inertia\Response;
 
 class EventController extends Controller
 {
+    public function __construct(private EventScheduleService $scheduleService) {}
+
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', Event::class);
 
         $events = Event::query()
             ->with('venue:id,name')
+            ->with('dates')
             ->withCount(['sessions', 'attendances'])
             ->orderByDesc('starts_at')
             ->get()
@@ -39,10 +42,21 @@ class EventController extends Controller
 
     public function store(StoreEventRequest $request): RedirectResponse
     {
-        Event::query()->create([
-            ...$request->validated(),
+        $validated = $request->validated();
+        $schedule = $validated['schedule'];
+        unset($validated['schedule']);
+
+        $event = Event::query()->create([
+            ...$validated,
+            ...$this->scheduleBounds($schedule),
             'created_by' => $request->user()->id,
         ]);
+
+        $this->scheduleService->syncEventDates(
+            $event,
+            $request->boolean('is_multi_day'),
+            $schedule,
+        );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Event created.')]);
 
@@ -53,7 +67,7 @@ class EventController extends Controller
     {
         $this->authorize('update', $event);
 
-        $event->load('venue:id,name')->loadCount(['sessions', 'attendances']);
+        $event->load(['venue:id,name', 'dates'])->loadCount(['sessions', 'attendances']);
 
         return Inertia::render('events/Edit', [
             'event' => $this->eventPayload($event, $request),
@@ -63,7 +77,20 @@ class EventController extends Controller
 
     public function update(UpdateEventRequest $request, Event $event): RedirectResponse
     {
-        $event->update($request->validated());
+        $validated = $request->validated();
+        $schedule = $validated['schedule'];
+        unset($validated['schedule']);
+
+        $event->update([
+            ...$validated,
+            ...$this->scheduleBounds($schedule),
+        ]);
+
+        $this->scheduleService->syncEventDates(
+            $event,
+            $request->boolean('is_multi_day'),
+            $schedule,
+        );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Event updated.')]);
 
@@ -94,6 +121,21 @@ class EventController extends Controller
     }
 
     /**
+     * @param  list<array{event_date: string}>  $schedule
+     * @return array{starts_at: string, ends_at: string}
+     */
+    private function scheduleBounds(array $schedule): array
+    {
+        $firstDate = $schedule[0]['event_date'];
+        $lastDate = $schedule[array_key_last($schedule)]['event_date'];
+
+        return [
+            'starts_at' => $firstDate.' 00:00:00',
+            'ends_at' => $lastDate.' 23:59:59',
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function eventPayload(Event $event, Request $request): array
@@ -108,10 +150,15 @@ class EventController extends Controller
             'type_label' => $event->type->label(),
             'status' => $event->status->value,
             'status_label' => $event->status->label(),
-            'starts_at' => $this->formatDateTimeLocal($event->starts_at),
-            'ends_at' => $this->formatDateTimeLocal($event->ends_at),
-            'check_in_opens_at' => $this->formatDateTimeLocal($event->check_in_opens_at),
-            'check_in_closes_at' => $this->formatDateTimeLocal($event->check_in_closes_at),
+            'is_multi_day' => $event->is_multi_day,
+            'schedule' => $event->dates->map(fn ($date) => [
+                'event_date' => $date->event_date->format('Y-m-d'),
+                'check_in_time' => substr((string) $date->check_in_time, 0, 5),
+                'check_out_time' => substr((string) $date->check_out_time, 0, 5),
+                'late_cutoff_time' => substr((string) $date->late_cutoff_time, 0, 5),
+            ])->values()->all(),
+            'starts_at' => $event->starts_at?->format('Y-m-d'),
+            'ends_at' => $event->ends_at?->format('Y-m-d'),
             'qr_rotation_seconds' => $event->qr_rotation_seconds,
             'duplicate_policy' => $event->duplicate_policy->value,
             'duplicate_policy_label' => $event->duplicate_policy->label(),
@@ -124,10 +171,5 @@ class EventController extends Controller
                 'viewAttendances' => $request->user()?->can('viewAttendances', $event) ?? false,
             ],
         ];
-    }
-
-    private function formatDateTimeLocal(?CarbonInterface $dateTime): ?string
-    {
-        return $dateTime?->format('Y-m-d\TH:i');
     }
 }

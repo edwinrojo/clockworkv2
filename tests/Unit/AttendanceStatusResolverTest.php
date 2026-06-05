@@ -14,38 +14,40 @@ class AttendanceStatusResolverTest extends TestCase
     use RefreshDatabase;
 
     #[Test]
-    public function it_marks_attendance_as_late_after_grace_period(): void
+    public function it_marks_attendance_as_late_after_on_time_cutoff(): void
     {
-        config(['clockwork.late_grace_minutes' => 15]);
+        $event = Event::factory()->live()->create();
+        $schedule = $event->dates()->first();
+        $this->assertNotNull($schedule);
 
-        $event = Event::factory()->live()->create([
-            'check_in_opens_at' => now()->subHour(),
-            'starts_at' => now()->subHour(),
+        $schedule->update([
+            'late_cutoff_time' => now()->subMinutes(30)->format('H:i:s'),
         ]);
 
-        $resolver = new AttendanceStatusResolver;
+        $resolver = app(AttendanceStatusResolver::class);
 
         $this->assertSame(
             AttendanceStatus::Late,
-            $resolver->forCheckIn($event, now()),
+            $resolver->forCheckIn($event, now(), $schedule->fresh()),
         );
     }
 
     #[Test]
-    public function it_marks_attendance_as_present_within_grace_period(): void
+    public function it_marks_attendance_as_present_on_or_before_on_time_cutoff(): void
     {
-        config(['clockwork.late_grace_minutes' => 30]);
+        $event = Event::factory()->live()->create();
+        $schedule = $event->dates()->first();
+        $this->assertNotNull($schedule);
 
-        $event = Event::factory()->live()->create([
-            'check_in_opens_at' => now()->subMinutes(10),
-            'starts_at' => now()->subMinutes(10),
+        $schedule->update([
+            'late_cutoff_time' => now()->addMinutes(30)->format('H:i:s'),
         ]);
 
-        $resolver = new AttendanceStatusResolver;
+        $resolver = app(AttendanceStatusResolver::class);
 
         $this->assertSame(
             AttendanceStatus::Present,
-            $resolver->forCheckIn($event, now()),
+            $resolver->forCheckIn($event, now(), $schedule->fresh()),
         );
     }
 }

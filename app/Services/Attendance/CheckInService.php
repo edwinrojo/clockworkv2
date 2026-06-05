@@ -4,7 +4,6 @@ namespace App\Services\Attendance;
 
 use App\Enums\AttendanceSource;
 use App\Enums\CheckInErrorCode;
-use App\Enums\DuplicatePolicy;
 use App\Enums\EventSessionStatus;
 use App\Enums\EventStatus;
 use App\Exceptions\CheckInException;
@@ -14,6 +13,7 @@ use App\Models\EventSession;
 use App\Models\QrToken;
 use App\Models\User;
 use App\Models\Venue;
+use App\Services\Event\EventScheduleService;
 use App\Services\Geofence\GeofenceValidator;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Cache;
@@ -21,7 +21,10 @@ use Illuminate\Support\Facades\DB;
 
 class CheckInService
 {
-    public function __construct(private GeofenceValidator $geofenceValidator) {}
+    public function __construct(
+        private GeofenceValidator $geofenceValidator,
+        private AttendanceDuplicateGuard $duplicateGuard,
+    ) {}
 
     /**
      * @return array{attendance: Attendance, replayed: bool}
@@ -52,7 +55,7 @@ class CheckInService
 
         $token = QrToken::query()
             ->where('token_hash', hash('sha256', $qrToken))
-            ->with(['eventSession.event.venue'])
+            ->with(['eventSession.event.venue', 'eventSession.eventDate'])
             ->first();
 
         if ($token === null) {
@@ -88,12 +91,15 @@ class CheckInService
         }
 
         $checkedInAt = now();
-        $status = app(AttendanceStatusResolver::class)->forCheckIn($event, $checkedInAt);
+        $schedule = $session->eventDate
+            ?? app(EventScheduleService::class)->scheduleForDate($event, $checkedInAt);
+        $status = app(AttendanceStatusResolver::class)->forCheckIn($event, $checkedInAt, $schedule);
 
         $attendance = DB::transaction(function () use (
             $user,
             $event,
             $session,
+            $schedule,
             $latitude,
             $longitude,
             $accuracyMeters,
@@ -102,11 +108,12 @@ class CheckInService
             $checkedInAt,
             $status,
         ): Attendance {
-            $this->assertNotDuplicate($user, $event);
+            $this->duplicateGuard->assertNotDuplicate($user, $event, $schedule);
 
             return Attendance::query()->create([
                 'event_id' => $event->id,
                 'event_session_id' => $session->id,
+                'event_date_id' => $schedule?->id,
                 'user_id' => $user->id,
                 'checked_in_at' => $checkedInAt,
                 'latitude' => $latitude,
@@ -120,7 +127,7 @@ class CheckInService
         });
 
         return [
-            'attendance' => $attendance->load(['event.venue']),
+            'attendance' => $attendance->load(['event.venue', 'eventDate']),
             'replayed' => false,
         ];
     }
@@ -135,29 +142,15 @@ class CheckInService
             throw new CheckInException(CheckInErrorCode::EventNotActive);
         }
 
-        $now = now();
+        $schedule = $session->eventDate
+            ?? app(EventScheduleService::class)->scheduleForToday($event);
 
-        if ($event->check_in_opens_at !== null && $now->lt($event->check_in_opens_at)) {
+        if ($schedule === null) {
             throw new CheckInException(CheckInErrorCode::EventNotActive);
         }
 
-        if ($event->check_in_closes_at !== null && $now->gt($event->check_in_closes_at)) {
+        if (now()->lt($schedule->checkInOpensAt())) {
             throw new CheckInException(CheckInErrorCode::EventNotActive);
-        }
-    }
-
-    private function assertNotDuplicate(User $user, Event $event): void
-    {
-        $query = Attendance::query()
-            ->where('user_id', $user->id)
-            ->where('event_id', $event->id);
-
-        if ($event->duplicate_policy === DuplicatePolicy::PerCalendarDay) {
-            $query->whereDate('checked_in_at', today());
-        }
-
-        if ($query->exists()) {
-            throw new CheckInException(CheckInErrorCode::AlreadyCheckedIn);
         }
     }
 

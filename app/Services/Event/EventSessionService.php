@@ -5,6 +5,7 @@ namespace App\Services\Event;
 use App\Enums\EventSessionStatus;
 use App\Enums\EventStatus;
 use App\Models\Event;
+use App\Models\EventDate;
 use App\Models\EventSession;
 use App\Models\User;
 use App\Services\Qr\QrTokenService;
@@ -13,9 +14,19 @@ use Illuminate\Validation\ValidationException;
 
 class EventSessionService
 {
-    public function __construct(private QrTokenService $qrTokenService) {}
+    public function __construct(
+        private QrTokenService $qrTokenService,
+        private EventScheduleService $scheduleService,
+    ) {}
 
     public function start(Event $event, User $startedBy): EventSession
+    {
+        $schedule = $this->scheduleService->assertCanStartSessionManually($event);
+
+        return $this->openSession($event, $schedule, $startedBy);
+    }
+
+    public function autoStart(Event $event, EventDate $schedule, User $startedBy): EventSession
     {
         if ($event->sessions()->where('status', EventSessionStatus::Active)->exists()) {
             throw ValidationException::withMessages([
@@ -23,22 +34,19 @@ class EventSessionService
             ]);
         }
 
-        return DB::transaction(function () use ($event, $startedBy): EventSession {
-            $this->markEventLiveWithOpenCheckInWindow($event);
-
-            $session = EventSession::query()->create([
-                'event_id' => $event->id,
-                'started_by' => $startedBy->id,
-                'status' => EventSessionStatus::Active,
-                'started_at' => now(),
+        if ($this->scheduleService->hasSessionForScheduleToday($schedule)) {
+            throw ValidationException::withMessages([
+                'session' => __('A check-in session already ran for this event date.'),
             ]);
+        }
 
-            $session->setRelation('event', $event);
+        if (! now()->greaterThanOrEqualTo($schedule->checkInOpensAt())) {
+            throw ValidationException::withMessages([
+                'session' => __('Check-in is not open yet for this event date.'),
+            ]);
+        }
 
-            $this->qrTokenService->issueToken($session);
-
-            return $session;
-        });
+        return $this->openSession($event, $schedule, $startedBy);
     }
 
     public function pause(EventSession $session): EventSession
@@ -66,8 +74,6 @@ class EventSessionService
         $session->update(['status' => EventSessionStatus::Active]);
         $session->loadMissing('event');
 
-        $this->markEventLiveWithOpenCheckInWindow($session->event);
-
         $this->qrTokenService->issueToken($session);
 
         return $session->fresh();
@@ -91,8 +97,14 @@ class EventSessionService
 
             $event = $session->event;
 
-            if (! $event->sessions()->where('status', EventSessionStatus::Active)->exists()) {
-                $event->update(['status' => EventStatus::Closed]);
+            if ($event !== null && ! $event->sessions()->whereIn('status', [EventSessionStatus::Active, EventSessionStatus::Paused])->exists()) {
+                $hasFutureDates = $event->dates()
+                    ->whereDate('event_date', '>', today()->toDateString())
+                    ->exists();
+
+                $event->update([
+                    'status' => $hasFutureDates ? EventStatus::Scheduled : EventStatus::Closed,
+                ]);
             }
 
             return $session->fresh();
@@ -120,25 +132,43 @@ class EventSessionService
             ->first();
     }
 
-    /**
-     * Coordinators expect check-in to open when a session goes live, even if the
-     * event was scheduled with a future check_in_opens_at.
-     */
-    private function markEventLiveWithOpenCheckInWindow(Event $event): void
+    public function manualStartAvailable(Event $event): bool
     {
-        $now = now();
-        $attributes = ['status' => EventStatus::Live];
-
-        if ($event->check_in_opens_at === null || $event->check_in_opens_at->isFuture()) {
-            $attributes['check_in_opens_at'] = $now;
+        if ($this->activeSessionFor($event) !== null) {
+            return false;
         }
 
-        if ($event->check_in_closes_at === null || $event->check_in_closes_at->lte($now)) {
-            $attributes['check_in_closes_at'] = $event->ends_at !== null && $event->ends_at->isFuture()
-                ? $event->ends_at
-                : $now->copy()->addHours(2);
+        if ($this->scheduleService->scheduleForToday($event) === null) {
+            return false;
         }
 
-        $event->update($attributes);
+        $schedule = $this->scheduleService->scheduleForToday($event);
+
+        if ($schedule !== null && $this->scheduleService->hasSessionForScheduleToday($schedule)) {
+            return false;
+        }
+
+        return $this->scheduleService->canStartSessionManually($event);
+    }
+
+    private function openSession(Event $event, EventDate $schedule, User $startedBy): EventSession
+    {
+        return DB::transaction(function () use ($event, $schedule, $startedBy): EventSession {
+            $event->update(['status' => EventStatus::Live]);
+
+            $session = EventSession::query()->create([
+                'event_id' => $event->id,
+                'event_date_id' => $schedule->id,
+                'started_by' => $startedBy->id,
+                'status' => EventSessionStatus::Active,
+                'started_at' => now(),
+            ]);
+
+            $session->setRelation('event', $event);
+
+            $this->qrTokenService->issueToken($session);
+
+            return $session;
+        });
     }
 }

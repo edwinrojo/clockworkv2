@@ -19,6 +19,7 @@ class EventManagementTest extends TestCase
     {
         $manager = User::factory()->eventManager()->create();
         $venue = Venue::factory()->create();
+        $eventDate = now()->addDay()->toDateString();
 
         $response = $this->actingAs($manager)->post(route('events.store'), [
             'title' => 'Monday Convocation',
@@ -26,10 +27,15 @@ class EventManagementTest extends TestCase
             'venue_id' => $venue->id,
             'type' => EventType::Convocation->value,
             'status' => EventStatus::Scheduled->value,
-            'starts_at' => now()->addDay()->format('Y-m-d H:i:s'),
-            'ends_at' => now()->addDay()->addHours(2)->format('Y-m-d H:i:s'),
-            'check_in_opens_at' => now()->addDay()->subMinutes(30)->format('Y-m-d H:i:s'),
-            'check_in_closes_at' => now()->addDay()->addHour()->format('Y-m-d H:i:s'),
+            'is_multi_day' => false,
+            'schedule' => [
+                [
+                    'event_date' => $eventDate,
+                    'check_in_time' => '08:00',
+                    'check_out_time' => '17:00',
+                    'late_cutoff_time' => '09:00',
+                ],
+            ],
             'qr_rotation_seconds' => 60,
             'duplicate_policy' => 'per_event',
         ]);
@@ -40,7 +46,19 @@ class EventManagementTest extends TestCase
             'title' => 'Monday Convocation',
             'venue_id' => $venue->id,
             'created_by' => $manager->id,
+            'is_multi_day' => false,
         ]);
+
+        $event = Event::query()->where('title', 'Monday Convocation')->first();
+        $this->assertNotNull($event);
+
+        $this->assertDatabaseHas('event_dates', [
+            'event_id' => $event->id,
+            'check_in_time' => '08:00:00',
+            'late_cutoff_time' => '09:00:00',
+        ]);
+
+        $this->assertSame($eventDate, $event->dates()->first()?->event_date->format('Y-m-d'));
     }
 
     public function test_viewer_can_list_events_but_cannot_create(): void
@@ -73,5 +91,31 @@ class EventManagementTest extends TestCase
             ->assertSessionHasErrors('event');
 
         $this->assertModelExists($event);
+    }
+
+    public function test_multi_day_event_requires_at_least_two_dates(): void
+    {
+        $manager = User::factory()->eventManager()->create();
+        $venue = Venue::factory()->create();
+
+        $this->actingAs($manager)
+            ->post(route('events.store'), [
+                'title' => 'Two-day Workshop',
+                'venue_id' => $venue->id,
+                'type' => EventType::Training->value,
+                'status' => EventStatus::Scheduled->value,
+                'is_multi_day' => true,
+                'schedule' => [
+                    [
+                        'event_date' => now()->addDay()->toDateString(),
+                        'check_in_time' => '08:00',
+                        'check_out_time' => '17:00',
+                        'late_cutoff_time' => '09:00',
+                    ],
+                ],
+                'qr_rotation_seconds' => 60,
+                'duplicate_policy' => 'per_event',
+            ])
+            ->assertSessionHasErrors('schedule');
     }
 }

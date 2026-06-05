@@ -6,6 +6,7 @@ use App\Enums\DuplicatePolicy;
 use App\Enums\EventStatus;
 use App\Enums\EventType;
 use App\Models\Event;
+use App\Models\EventDate;
 use App\Models\User;
 use App\Models\Venue;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -21,8 +22,7 @@ class EventFactory extends Factory
      */
     public function definition(): array
     {
-        $startsAt = fake()->dateTimeBetween('+1 day', '+2 weeks');
-        $endsAt = (clone $startsAt)->modify('+2 hours');
+        $eventDate = fake()->dateTimeBetween('+1 day', '+2 weeks')->format('Y-m-d');
 
         return [
             'venue_id' => Venue::factory(),
@@ -31,31 +31,64 @@ class EventFactory extends Factory
             'description' => fake()->optional()->paragraph(),
             'type' => EventType::Convocation,
             'status' => EventStatus::Scheduled,
-            'starts_at' => $startsAt,
-            'ends_at' => $endsAt,
-            'check_in_opens_at' => (clone $startsAt)->modify('-30 minutes'),
-            'check_in_closes_at' => (clone $startsAt)->modify('+1 hour'),
+            'is_multi_day' => false,
+            'starts_at' => $eventDate.' 00:00:00',
+            'ends_at' => $eventDate.' 23:59:59',
+            'check_in_opens_at' => null,
+            'check_in_closes_at' => null,
             'qr_rotation_seconds' => 60,
             'duplicate_policy' => DuplicatePolicy::PerEvent,
             'display_secret' => Str::random(64),
         ];
     }
 
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Event $event): void {
+            if ($event->dates()->exists()) {
+                return;
+            }
+
+            $date = $event->starts_at?->toDateString() ?? today()->toDateString();
+
+            EventDate::factory()->for($event)->create([
+                'event_date' => $date,
+                'check_in_time' => '08:00:00',
+                'check_out_time' => '17:00:00',
+                'late_cutoff_time' => '09:00:00',
+            ]);
+        });
+    }
+
     public function live(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn (): array => [
             'status' => EventStatus::Live,
-            'starts_at' => now()->subHour(),
-            'ends_at' => now()->addHours(2),
-            'check_in_opens_at' => now()->subHour(),
-            'check_in_closes_at' => now()->addHours(2),
-        ]);
+            'starts_at' => today()->startOfDay(),
+            'ends_at' => today()->endOfDay(),
+        ])->afterCreating(function (Event $event): void {
+            $event->dates()->delete();
+
+            EventDate::factory()->for($event)->openNow()->create();
+        });
     }
 
     public function draft(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn (array $attributes): array => [
             'status' => EventStatus::Draft,
         ]);
+    }
+
+    public function scheduledForToday(): static
+    {
+        return $this->state(fn (): array => [
+            'starts_at' => today()->startOfDay(),
+            'ends_at' => today()->endOfDay(),
+        ])->afterCreating(function (Event $event): void {
+            $event->dates()->delete();
+
+            EventDate::factory()->for($event)->openNow()->create();
+        });
     }
 }

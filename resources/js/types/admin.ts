@@ -30,6 +30,13 @@ export type EventRowAbilities = RowAbilities & {
     viewAttendances: boolean;
 };
 
+export type EventScheduleRow = {
+    event_date: string;
+    check_in_time: string;
+    check_out_time: string;
+    late_cutoff_time: string;
+};
+
 export type EventRow = {
     id: string;
     title: string;
@@ -40,16 +47,21 @@ export type EventRow = {
     type_label: string;
     status: string;
     status_label: string;
+    is_multi_day: boolean;
+    schedule: EventScheduleRow[];
     starts_at: string;
     ends_at: string;
-    check_in_opens_at: string | null;
-    check_in_closes_at: string | null;
     qr_rotation_seconds: number;
     duplicate_policy: string;
     duplicate_policy_label: string;
     sessions_count: number;
     attendances_count: number;
     can: EventRowAbilities;
+};
+
+export type EventTodaySchedule = EventScheduleRow & {
+    check_in_opens_at: string;
+    late_cutoff_at: string;
 };
 
 export type EventLiveSession = {

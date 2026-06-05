@@ -26,6 +26,7 @@ use Illuminate\Support\Str;
     'description',
     'type',
     'status',
+    'is_multi_day',
     'starts_at',
     'ends_at',
     'check_in_opens_at',
@@ -55,6 +56,7 @@ class Event extends Model
         return [
             'type' => EventType::class,
             'status' => EventStatus::class,
+            'is_multi_day' => 'boolean',
             'duplicate_policy' => DuplicatePolicy::class,
             'roster_scope' => EventRosterScope::class,
             'starts_at' => 'datetime',
@@ -72,6 +74,11 @@ class Event extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function dates(): HasMany
+    {
+        return $this->hasMany(EventDate::class)->orderBy('event_date');
     }
 
     public function sessions(): HasMany
@@ -106,17 +113,10 @@ class Event extends Model
      */
     public function scopeEligibleForCheckIn(Builder $query): void
     {
-        $now = now();
-
         $query
             ->where('status', EventStatus::Live)
-            ->where(function (Builder $query) use ($now): void {
-                $query->whereNull('check_in_opens_at')
-                    ->orWhere('check_in_opens_at', '<=', $now);
-            })
-            ->where(function (Builder $query) use ($now): void {
-                $query->whereNull('check_in_closes_at')
-                    ->orWhere('check_in_closes_at', '>=', $now);
+            ->whereHas('dates', function (Builder $query): void {
+                $query->whereDate('event_date', today());
             })
             ->whereHas('sessions', function (Builder $query): void {
                 $query->where('status', EventSessionStatus::Active);

@@ -20,11 +20,23 @@ defineOptions({
 const page = usePage();
 const canCreate = computed(() => page.props.auth.can.events.create);
 
-function formatSchedule(startsAt: string, endsAt: string): string {
-    const start = new Date(startsAt);
-    const end = new Date(endsAt);
+function formatDate(value: string): string {
+    return new Date(`${value}T00:00:00`).toLocaleDateString();
+}
 
-    return `${start.toLocaleString()} – ${end.toLocaleTimeString()}`;
+function formatSchedule(event: EventRow): string {
+    if (event.schedule.length === 1) {
+        return formatDate(event.schedule[0].event_date);
+    }
+
+    const first = event.schedule[0]?.event_date;
+    const last = event.schedule[event.schedule.length - 1]?.event_date;
+
+    if (first && last) {
+        return `${formatDate(first)} – ${formatDate(last)}`;
+    }
+
+    return formatDate(event.starts_at);
 }
 
 function deleteEvent(id: string): void {
@@ -79,9 +91,7 @@ function deleteEvent(id: string): void {
                             {{ event.venue_name ?? '—' }}
                         </td>
                         <td class="px-4 py-3 text-muted-foreground">
-                            {{
-                                formatSchedule(event.starts_at, event.ends_at)
-                            }}
+                            {{ formatSchedule(event) }}
                         </td>
                         <td class="px-4 py-3">
                             <EventStatusBadge

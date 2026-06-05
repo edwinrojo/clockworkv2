@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
+import { ref, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { EventRow, SelectOption, VenueOption } from '@/types/admin';
@@ -9,6 +11,13 @@ import type { EventRow, SelectOption, VenueOption } from '@/types/admin';
 type FormBinding = {
     action: string;
     method: 'get' | 'post' | 'put' | 'patch' | 'delete';
+};
+
+type ScheduleRow = {
+    event_date: string;
+    check_in_time: string;
+    check_out_time: string;
+    late_cutoff_time: string;
 };
 
 type Props = {
@@ -21,14 +30,62 @@ type Props = {
     submitLabel: string;
 };
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const selectClass =
     'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50';
+
+function tomorrowDate(): string {
+    const date = new Date();
+    date.setDate(date.getDate() + 1);
+
+    return date.toISOString().slice(0, 10);
+}
+
+function defaultScheduleRow(): ScheduleRow {
+    return {
+        event_date: tomorrowDate(),
+        check_in_time: '08:00',
+        check_out_time: '17:00',
+        late_cutoff_time: '09:00',
+    };
+}
+
+const isMultiDay = ref(props.event?.is_multi_day ?? false);
+
+const schedule = ref<ScheduleRow[]>(
+    props.event?.schedule?.length
+        ? props.event.schedule.map((row) => ({ ...row }))
+        : [defaultScheduleRow()],
+);
+
+watch(isMultiDay, (multiDay, wasMultiDay) => {
+    if (multiDay === wasMultiDay) {
+        return;
+    }
+
+    if (multiDay && schedule.value.length === 1) {
+        schedule.value = [...schedule.value, defaultScheduleRow()];
+    }
+
+    if (!multiDay && schedule.value.length > 1) {
+        schedule.value = [schedule.value[0]];
+    }
+});
+
+function addDate(): void {
+    schedule.value.push(defaultScheduleRow());
+}
+
+function removeDate(index: number): void {
+    if (schedule.value.length > 1) {
+        schedule.value.splice(index, 1);
+    }
+}
 </script>
 
 <template>
-    <Form v-bind="form" class="max-w-2xl space-y-6" v-slot="{ errors, processing }">
+    <Form v-bind="form" class="max-w-3xl space-y-6" v-slot="{ errors, processing }">
         <div class="grid gap-2">
             <Label for="title">Title</Label>
             <Input
@@ -108,52 +165,132 @@ const selectClass =
             <InputError :message="errors.status" />
         </div>
 
-        <div class="grid gap-2 sm:grid-cols-2 sm:gap-4">
-            <div class="grid gap-2">
-                <Label for="starts_at">Starts at</Label>
-                <Input
-                    id="starts_at"
-                    name="starts_at"
-                    type="datetime-local"
-                    :default-value="event?.starts_at"
-                    required
-                />
-                <InputError :message="errors.starts_at" />
+        <div class="space-y-4 rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h3 class="font-medium">Event dates</h3>
+                    <p class="text-sm text-muted-foreground">
+                        Dates only — set check-in, check-out, and on-time cutoff
+                        times for each day.
+                    </p>
+                </div>
+                <label
+                    for="is_multi_day"
+                    class="flex cursor-pointer items-center gap-2 text-sm"
+                >
+                    <Checkbox id="is_multi_day" v-model="isMultiDay" />
+                    <span>Multiple dates</span>
+                </label>
             </div>
-            <div class="grid gap-2">
-                <Label for="ends_at">Ends at</Label>
-                <Input
-                    id="ends_at"
-                    name="ends_at"
-                    type="datetime-local"
-                    :default-value="event?.ends_at"
-                    required
-                />
-                <InputError :message="errors.ends_at" />
-            </div>
-        </div>
 
-        <div class="grid gap-2 sm:grid-cols-2 sm:gap-4">
-            <div class="grid gap-2">
-                <Label for="check_in_opens_at">Check-in opens</Label>
-                <Input
-                    id="check_in_opens_at"
-                    name="check_in_opens_at"
-                    type="datetime-local"
-                    :default-value="event?.check_in_opens_at ?? ''"
-                />
-                <InputError :message="errors.check_in_opens_at" />
+            <input
+                type="hidden"
+                name="is_multi_day"
+                :value="isMultiDay ? '1' : '0'"
+            />
+
+            <InputError :message="errors.schedule" />
+
+            <div
+                v-for="(row, index) in schedule"
+                :key="index"
+                class="space-y-3 rounded-lg border border-dashed p-4"
+            >
+                <div class="flex items-center justify-between gap-2">
+                    <p class="text-sm font-medium">
+                        {{
+                            isMultiDay
+                                ? `Day ${index + 1}`
+                                : 'Event date'
+                        }}
+                    </p>
+                    <Button
+                        v-if="isMultiDay && schedule.length > 1"
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        @click="removeDate(index)"
+                    >
+                        Remove
+                    </Button>
+                </div>
+
+                <div class="grid gap-2 sm:grid-cols-2">
+                    <div class="grid gap-2">
+                        <Label :for="`schedule_${index}_event_date`">Date</Label>
+                        <Input
+                            :id="`schedule_${index}_event_date`"
+                            :name="`schedule[${index}][event_date]`"
+                            type="date"
+                            v-model="row.event_date"
+                            required
+                        />
+                        <InputError
+                            :message="errors[`schedule.${index}.event_date`]"
+                        />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label :for="`schedule_${index}_check_in_time`"
+                            >Check-in opens</Label
+                        >
+                        <Input
+                            :id="`schedule_${index}_check_in_time`"
+                            :name="`schedule[${index}][check_in_time]`"
+                            type="time"
+                            v-model="row.check_in_time"
+                            required
+                        />
+                        <InputError
+                            :message="errors[`schedule.${index}.check_in_time`]"
+                        />
+                    </div>
+                </div>
+
+                <div class="grid gap-2 sm:grid-cols-2">
+                    <div class="grid gap-2">
+                        <Label :for="`schedule_${index}_check_out_time`"
+                            >Check-out time</Label
+                        >
+                        <Input
+                            :id="`schedule_${index}_check_out_time`"
+                            :name="`schedule[${index}][check_out_time]`"
+                            type="time"
+                            v-model="row.check_out_time"
+                            required
+                        />
+                        <InputError
+                            :message="errors[`schedule.${index}.check_out_time`]"
+                        />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label :for="`schedule_${index}_late_cutoff_time`"
+                            >On-time cutoff (late after)</Label
+                        >
+                        <Input
+                            :id="`schedule_${index}_late_cutoff_time`"
+                            :name="`schedule[${index}][late_cutoff_time]`"
+                            type="time"
+                            v-model="row.late_cutoff_time"
+                            required
+                        />
+                        <InputError
+                            :message="
+                                errors[`schedule.${index}.late_cutoff_time`]
+                            "
+                        />
+                    </div>
+                </div>
             </div>
-            <div class="grid gap-2">
-                <Label for="check_in_closes_at">Check-in closes</Label>
-                <Input
-                    id="check_in_closes_at"
-                    name="check_in_closes_at"
-                    type="datetime-local"
-                    :default-value="event?.check_in_closes_at ?? ''"
-                />
-                <InputError :message="errors.check_in_closes_at" />
-            </div>
+
+            <Button
+                v-if="isMultiDay"
+                type="button"
+                variant="outline"
+                size="sm"
+                @click="addDate"
+            >
+                Add date
+            </Button>
         </div>
 
         <div class="grid gap-2 sm:grid-cols-2 sm:gap-4">

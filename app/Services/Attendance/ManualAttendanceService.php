@@ -11,10 +11,16 @@ use App\Models\ActivityLog;
 use App\Models\Attendance;
 use App\Models\Event;
 use App\Models\User;
+use App\Services\Event\EventScheduleService;
 use Illuminate\Support\Facades\DB;
 
 class ManualAttendanceService
 {
+    public function __construct(
+        private AttendanceDuplicateGuard $duplicateGuard,
+        private EventScheduleService $scheduleService,
+    ) {}
+
     public function record(
         Event $event,
         User $employee,
@@ -26,24 +32,26 @@ class ManualAttendanceService
             throw new CheckInException(CheckInErrorCode::Unauthorized);
         }
 
-        if (Attendance::query()->where('event_id', $event->id)->where('user_id', $employee->id)->exists()) {
-            throw new CheckInException(CheckInErrorCode::AlreadyCheckedIn);
-        }
-
         $session = $event->sessions()
             ->where('status', EventSessionStatus::Active)
             ->latest('started_at')
             ->first();
 
+        $schedule = $session?->eventDate
+            ?? $this->scheduleService->scheduleForToday($event);
+
+        $this->duplicateGuard->assertNotDuplicate($employee, $event, $schedule);
+
         $checkedInAt = now();
         $resolvedStatus = $status === AttendanceStatus::Present
-            ? app(AttendanceStatusResolver::class)->forCheckIn($event, $checkedInAt)
+            ? app(AttendanceStatusResolver::class)->forCheckIn($event, $checkedInAt, $schedule)
             : $status;
 
-        return DB::transaction(function () use ($event, $employee, $admin, $reason, $resolvedStatus, $session, $checkedInAt): Attendance {
+        return DB::transaction(function () use ($event, $employee, $admin, $reason, $resolvedStatus, $session, $schedule, $checkedInAt): Attendance {
             $attendance = Attendance::query()->create([
                 'event_id' => $event->id,
                 'event_session_id' => $session?->id,
+                'event_date_id' => $schedule?->id,
                 'user_id' => $employee->id,
                 'checked_in_at' => $checkedInAt,
                 'source' => AttendanceSource::Manual,

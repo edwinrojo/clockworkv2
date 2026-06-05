@@ -39,6 +39,14 @@ class ClockworkSeeder extends Seeder
             'employee_number' => 'EMP-00001',
         ]);
 
+        User::factory()->employee()->forDepartment($hr)->create([
+            'first_name' => 'Edwin',
+            'middle_name' => 'Razonable',
+            'last_name' => 'Rojo',
+            'email' => 'edwinrojo15@gmail.com',
+            'employee_number' => 'EMP-00002',
+        ]);
+
         $venue = Venue::factory()->create([
             'name' => 'Davao del Sur Coliseum',
             'address' => 'Digos City, Davao del Sur',

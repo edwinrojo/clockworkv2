@@ -17,6 +17,7 @@ class EventController extends Controller
             ->eligibleForCheckIn()
             ->with([
                 'venue',
+                'dates',
                 'sessions' => fn ($query) => $query
                     ->where('status', EventSessionStatus::Active)
                     ->latest('started_at'),

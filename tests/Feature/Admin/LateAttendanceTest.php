@@ -12,14 +12,15 @@ class LateAttendanceTest extends TestCase
     use CreatesMobileCheckInScenario;
     use RefreshDatabase;
 
-    public function test_check_in_after_grace_period_is_marked_late(): void
+    public function test_check_in_after_on_time_cutoff_is_marked_late(): void
     {
-        config(['clockwork.late_grace_minutes' => 0]);
-
         $scenario = $this->createMobileCheckInScenario();
-        $scenario['event']->update([
-            'check_in_opens_at' => now()->subHours(2),
-            'starts_at' => now()->subHours(2),
+
+        $schedule = $scenario['event']->dates()->first();
+        $this->assertNotNull($schedule);
+
+        $schedule->update([
+            'late_cutoff_time' => now()->subMinutes(5)->format('H:i:s'),
         ]);
 
         $this->actingAs($scenario['employee'], 'sanctum')

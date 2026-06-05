@@ -36,6 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('clockwork:rotate-qr-tokens')->everyTenSeconds();
+        $schedule->command('clockwork:auto-start-sessions')->everyMinute();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

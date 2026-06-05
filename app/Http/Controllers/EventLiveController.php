@@ -7,6 +7,7 @@ use App\Models\Attendance;
 use App\Models\Department;
 use App\Models\Event;
 use App\Services\Attendance\ExpectedRosterService;
+use App\Services\Event\EventScheduleService;
 use App\Services\Event\EventSessionService;
 use App\Services\Qr\QrTokenService;
 use Illuminate\Http\Request;
@@ -17,6 +18,7 @@ class EventLiveController extends Controller
 {
     public function __construct(
         private EventSessionService $sessionService,
+        private EventScheduleService $scheduleService,
         private QrTokenService $qrTokenService,
         private ExpectedRosterService $rosterService,
     ) {}
@@ -29,6 +31,8 @@ class EventLiveController extends Controller
         $event->loadCount('attendances');
 
         $departmentId = $request->string('department_id')->toString() ?: null;
+
+        $todaySchedule = $this->scheduleService->scheduleForToday($event);
 
         $session = $this->sessionService->activeSessionFor($event);
         $session?->load('starter:id,first_name,last_name');
@@ -90,6 +94,15 @@ class EventLiveController extends Controller
             'filters' => [
                 'department_id' => $departmentId,
             ],
+            'todaySchedule' => $todaySchedule ? [
+                'event_date' => $todaySchedule->event_date->format('Y-m-d'),
+                'check_in_time' => substr((string) $todaySchedule->check_in_time, 0, 5),
+                'check_out_time' => substr((string) $todaySchedule->check_out_time, 0, 5),
+                'late_cutoff_time' => substr((string) $todaySchedule->late_cutoff_time, 0, 5),
+                'check_in_opens_at' => $todaySchedule->checkInOpensAt()->toIso8601String(),
+                'late_cutoff_at' => $todaySchedule->lateCutoffAt()->toIso8601String(),
+            ] : null,
+            'manualStartAvailable' => $this->sessionService->manualStartAvailable($event),
             'can' => [
                 'manageSession' => $request->user()?->can('manageSession', $event) ?? false,
                 'viewAttendances' => $request->user()?->can('viewAttendances', $event) ?? false,

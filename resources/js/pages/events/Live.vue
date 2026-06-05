@@ -11,7 +11,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { attendances, edit, index, live } from '@/routes/events';
 import { edit as rosterEdit } from '@/routes/events/roster';
-import type { EventLiveAttendance, EventLiveSession } from '@/types/admin';
+import type {
+    EventLiveAttendance,
+    EventLiveSession,
+    EventTodaySchedule,
+} from '@/types/admin';
 
 type LiveEvent = {
     id: string;
@@ -61,6 +65,8 @@ const props = defineProps<{
     missingEmployees: MissingEmployee[];
     departments: DepartmentOption[];
     filters: { department_id: string | null };
+    todaySchedule: EventTodaySchedule | null;
+    manualStartAvailable: boolean;
     can: {
         manageSession: boolean;
         viewAttendances: boolean;
@@ -87,6 +93,14 @@ const hasSession = computed(() => props.session !== null);
 
 function formatTime(iso: string): string {
     return new Date(iso).toLocaleString();
+}
+
+function formatClockTime(value: string): string {
+    const [hours, minutes] = value.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+
+    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
 function reloadLive(): void {
@@ -241,15 +255,52 @@ onUnmounted(() => {
                     No check-in session is running.
                 </p>
 
+                <div
+                    v-if="todaySchedule"
+                    class="rounded-lg bg-muted/40 p-3 text-sm"
+                >
+                    <p class="font-medium">Today's schedule</p>
+                    <p class="mt-1 text-muted-foreground">
+                        Check-in opens
+                        {{ formatClockTime(todaySchedule.check_in_time) }}
+                        · on-time until
+                        {{ formatClockTime(todaySchedule.late_cutoff_time) }}
+                        · check-out
+                        {{ formatClockTime(todaySchedule.check_out_time) }}
+                    </p>
+                    <p
+                        v-if="!hasSession && !manualStartAvailable"
+                        class="mt-2 text-xs text-amber-600 dark:text-amber-400"
+                    >
+                        Manual start is disabled until check-in opens. Sessions
+                        also auto-start at that time.
+                    </p>
+                </div>
+                <p
+                    v-else-if="!hasSession"
+                    class="text-sm text-muted-foreground"
+                >
+                    No event date is scheduled for today.
+                </p>
+
                 <div v-if="can.manageSession" class="flex flex-wrap gap-2">
                     <Form
-                        v-if="!hasSession"
+                        v-if="!hasSession && manualStartAvailable"
                         :action="EventSessionController.start.url(event.id)"
                         method="post"
                         class="contents"
                     >
                         <Button type="submit" size="sm">Start session</Button>
                     </Form>
+
+                    <Button
+                        v-else-if="!hasSession && todaySchedule"
+                        type="button"
+                        size="sm"
+                        disabled
+                    >
+                        Start session
+                    </Button>
 
                     <Form
                         v-if="sessionActive"
