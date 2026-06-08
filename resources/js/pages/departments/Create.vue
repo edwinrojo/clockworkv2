@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import DepartmentController from '@/actions/App/Http/Controllers/DepartmentController';
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import DepartmentForm from '@/components/departments/DepartmentForm.vue';
-import Heading from '@/components/Heading.vue';
-import { Button } from '@/components/ui/button';
 import { index } from '@/routes/departments';
 import type { DepartmentOption } from '@/types';
 
@@ -24,16 +23,11 @@ defineOptions({
 <template>
     <Head title="Add department" />
 
-    <div class="flex flex-col gap-6 p-4">
-        <div class="flex items-center justify-between gap-4">
-            <Heading
-                title="Add department"
-                description="Create a new office or division"
-            />
-            <Button variant="outline" as-child>
-                <Link :href="index()">Back</Link>
-            </Button>
-        </div>
+    <div class="admin-page">
+        <AdminPageHeader
+            title="Add department"
+            description="Create a new office or division"
+        />
 
         <DepartmentForm
             :form="DepartmentController.store.form()"

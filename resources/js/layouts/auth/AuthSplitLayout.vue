@@ -74,7 +74,7 @@ defineProps<{
 
             <div class="w-full max-w-md">
                 <div
-                    class="rounded-2xl bg-card p-8 shadow-lg shadow-black/10 dark:shadow-black/30"
+                    class="rounded-2xl border border-border/70 bg-card p-8 shadow-[var(--elevation-panel)]"
                 >
                     <div class="mb-8 space-y-2 text-center lg:text-left">
                         <h1

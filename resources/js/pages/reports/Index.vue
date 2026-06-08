@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import AdminTable from '@/components/admin/AdminTable.vue';
 import EventStatusBadge from '@/components/admin/EventStatusBadge.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,7 +37,7 @@ function formatDate(iso: string): string {
 <template>
     <Head title="Reports" />
 
-    <div class="flex flex-col gap-6 p-4">
+    <div class="admin-page">
         <AdminPageHeader
             title="Attendance reports"
             description="Summary of check-ins across events"
@@ -72,58 +73,45 @@ function formatDate(iso: string): string {
             <Button type="submit">Apply</Button>
         </Form>
 
-        <div
-            class="admin-panel"
-        >
-            <table class="w-full text-sm">
-                <thead class="border-b bg-muted/50 text-left">
-                    <tr>
-                        <th class="px-4 py-3 font-medium">Event</th>
-                        <th class="px-4 py-3 font-medium">Venue</th>
-                        <th class="px-4 py-3 font-medium">Date</th>
-                        <th class="px-4 py-3 font-medium">Status</th>
-                        <th class="px-4 py-3 font-medium">Attendances</th>
-                        <th class="px-4 py-3 text-right font-medium">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="event in events"
-                        :key="event.id"
-                        class="border-b last:border-0"
-                    >
-                        <td class="px-4 py-3 font-medium">{{ event.title }}</td>
-                        <td class="px-4 py-3 text-muted-foreground">
-                            {{ event.venue_name ?? '—' }}
-                        </td>
-                        <td class="px-4 py-3 text-muted-foreground">
-                            {{ formatDate(event.starts_at) }}
-                        </td>
-                        <td class="px-4 py-3">
-                            <EventStatusBadge
-                                :status="event.status"
-                                :label="event.status_label"
-                            />
-                        </td>
-                        <td class="px-4 py-3 tabular-nums">
-                            {{ event.attendances_count }}
-                        </td>
-                        <td class="px-4 py-3 text-right">
-                            <Button variant="outline" size="sm" as-child>
-                                <Link :href="show(event.id)">View report</Link>
-                            </Button>
-                        </td>
-                    </tr>
-                    <tr v-if="events.length === 0">
-                        <td
-                            colspan="6"
-                            class="px-4 py-8 text-center text-muted-foreground"
-                        >
-                            No events in this date range.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <AdminTable>
+            <thead>
+                <tr>
+                    <th>Event</th>
+                    <th>Venue</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Attendances</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="event in events" :key="event.id">
+                    <td class="font-medium">{{ event.title }}</td>
+                    <td class="text-muted-foreground">
+                        {{ event.venue_name ?? '—' }}
+                    </td>
+                    <td class="text-muted-foreground">
+                        {{ formatDate(event.starts_at) }}
+                    </td>
+                    <td>
+                        <EventStatusBadge
+                            :status="event.status"
+                            :label="event.status_label"
+                        />
+                    </td>
+                    <td class="tabular-nums">{{ event.attendances_count }}</td>
+                    <td class="text-right">
+                        <Button variant="outline" size="sm" as-child>
+                            <Link :href="show(event.id)">View report</Link>
+                        </Button>
+                    </td>
+                </tr>
+                <tr v-if="events.length === 0">
+                    <td colspan="6" class="py-10 text-center text-muted-foreground">
+                        No events in this date range.
+                    </td>
+                </tr>
+            </tbody>
+        </AdminTable>
     </div>
 </template>

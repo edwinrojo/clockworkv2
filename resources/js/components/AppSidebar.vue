@@ -34,44 +34,50 @@ import { index as usersIndex } from '@/routes/users';
 import { index as venuesIndex } from '@/routes/venues';
 import type { NavItem } from '@/types';
 
+type NavGroup = {
+    label: string;
+    items: NavItem[];
+};
+
 const page = usePage();
 
-const mainNavItems = computed<NavItem[]>(() => {
-    const items: NavItem[] = [
-        {
-            title: 'Dashboard',
-            href: dashboard(),
-            icon: LayoutGrid,
-        },
-    ];
+const navGroups = computed<NavGroup[]>(() => {
+    const can = page.props.auth.can;
+    const groups: NavGroup[] = [];
 
-    if (page.props.auth.can.events.viewAny) {
-        items.push({
-            title: 'Events',
-            href: eventsIndex(),
-            icon: Calendar,
-        });
-        items.push({
-            title: 'Reports',
-            href: reportsIndex(),
-            icon: BarChart3,
-        });
-        items.push({
-            title: 'Audit log',
-            href: auditIndex(),
-            icon: ClipboardList,
+    groups.push({
+        label: 'Overview',
+        items: [
+            {
+                title: 'Dashboard',
+                href: dashboard(),
+                icon: LayoutGrid,
+            },
+        ],
+    });
+
+    if (can.events.viewAny) {
+        groups.push({
+            label: 'Operations',
+            items: [
+                {
+                    title: 'Events',
+                    href: eventsIndex(),
+                    icon: Calendar,
+                },
+                {
+                    title: 'Reports',
+                    href: reportsIndex(),
+                    icon: BarChart3,
+                },
+            ],
         });
     }
 
-    return items;
-});
-
-const organizationNavItems = computed<NavItem[]>(() => {
-    const items: NavItem[] = [];
-    const can = page.props.auth.can;
+    const organizationItems: NavItem[] = [];
 
     if (can.departments.viewAny) {
-        items.push({
+        organizationItems.push({
             title: 'Departments',
             href: departmentsIndex(),
             icon: Building2,
@@ -79,20 +85,29 @@ const organizationNavItems = computed<NavItem[]>(() => {
     }
 
     if (can.venues.viewAny) {
-        items.push({
+        organizationItems.push({
             title: 'Venues',
             href: venuesIndex(),
             icon: MapPin,
         });
     }
 
+    if (organizationItems.length > 0) {
+        groups.push({
+            label: 'Organization',
+            items: organizationItems,
+        });
+    }
+
+    const administrationItems: NavItem[] = [];
+
     if (can.users.viewAny) {
-        items.push({
+        administrationItems.push({
             title: 'Users',
             href: usersIndex(),
             icon: Users,
         });
-        items.push({
+        administrationItems.push({
             title: 'Device requests',
             href: deviceRequestsIndex(),
             icon: Smartphone,
@@ -106,7 +121,22 @@ const organizationNavItems = computed<NavItem[]>(() => {
         });
     }
 
-    return items;
+    if (can.events.viewAny) {
+        administrationItems.push({
+            title: 'Audit log',
+            href: auditIndex(),
+            icon: ClipboardList,
+        });
+    }
+
+    if (administrationItems.length > 0) {
+        groups.push({
+            label: 'Administration',
+            items: administrationItems,
+        });
+    }
+
+    return groups;
 });
 
 const footerNavItems: NavItem[] = [];
@@ -127,11 +157,11 @@ const footerNavItems: NavItem[] = [];
         </SidebarHeader>
 
         <SidebarContent>
-            <NavMain :items="mainNavItems" />
             <NavMain
-                v-if="organizationNavItems.length > 0"
-                label="Organization"
-                :items="organizationNavItems"
+                v-for="group in navGroups"
+                :key="group.label"
+                :label="group.label"
+                :items="group.items"
             />
         </SidebarContent>
 

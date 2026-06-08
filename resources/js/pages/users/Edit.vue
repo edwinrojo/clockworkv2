@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Form, Head, Link } from '@inertiajs/vue3';
+import { Form, Head } from '@inertiajs/vue3';
 import DeviceChangeRequestController from '@/actions/App/Http/Controllers/DeviceChangeRequestController';
 import UserController from '@/actions/App/Http/Controllers/UserController';
-import Heading from '@/components/Heading.vue';
+import AdminFormSection from '@/components/admin/AdminFormSection.vue';
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import UserForm from '@/components/users/UserForm.vue';
 import { Button } from '@/components/ui/button';
 import { index } from '@/routes/users';
@@ -23,34 +24,29 @@ defineOptions({
 <template>
     <Head :title="`Edit ${managedUser.name}`" />
 
-    <div class="flex flex-col gap-6 p-4">
-        <div class="flex items-center justify-between gap-4">
-            <Heading
-                :title="managedUser.name"
-                description="Update account details and access"
-            />
-            <Button variant="outline" as-child>
-                <Link :href="index()">Back</Link>
-            </Button>
-        </div>
-
-        <UserForm
-            :form="UserController.update.form(managedUser.id)"
-            :departments="departments"
-            :roles="roles"
-            :managed-user="managedUser"
-            submit-label="Save changes"
+    <div class="admin-page">
+        <AdminPageHeader
+            :title="managedUser.name"
+            description="Update account details and access"
         />
 
-        <div
+        <div class="grid gap-6 xl:grid-cols-3">
+            <div class="space-y-6 xl:col-span-2">
+                <UserForm
+                    :form="UserController.update.form(managedUser.id)"
+                    :departments="departments"
+                    :roles="roles"
+                    :managed-user="managedUser"
+                    submit-label="Save changes"
+                />
+            </div>
+
+            <aside class="space-y-6">
+        <AdminFormSection
             v-if="managedUser.can.managePassword && !managedUser.email_verified_at"
-            class="admin-card max-w-xl space-y-4 p-4"
+            title="Email verification"
+            description="Send a six-digit confirmation code to the employee’s email. They must enter it in the mobile app before they can sign in."
         >
-            <p class="text-sm font-medium">Email verification</p>
-            <p class="text-sm text-muted-foreground">
-                Send a six-digit confirmation code to the employee’s email.
-                They must enter it in the mobile app before they can sign in.
-            </p>
             <Form
                 :action="
                     UserController.sendEmailVerification.url(managedUser.id)
@@ -67,17 +63,13 @@ defineOptions({
                     Send verification code
                 </Button>
             </Form>
-        </div>
+        </AdminFormSection>
 
-        <div
+        <AdminFormSection
             v-if="managedUser.can.managePassword"
-            class="admin-card max-w-xl space-y-4 p-4"
+            title="Employee password"
+            description="Send a mobile reset email or set a temporary password. Both revoke active Flutter sessions."
         >
-            <p class="text-sm font-medium">Employee password</p>
-            <p class="text-sm text-muted-foreground">
-                Send a mobile reset email or set a temporary password. Both
-                revoke active Flutter sessions.
-            </p>
             <Form
                 :action="UserController.sendPasswordReset.url(managedUser.id)"
                 method="post"
@@ -131,24 +123,17 @@ defineOptions({
                     Set password
                 </Button>
             </Form>
-        </div>
+        </AdminFormSection>
 
-        <div
+        <AdminFormSection
             v-if="
                 managedUser.can.revokeTokens ||
                 managedUser.registered_device ||
                 managedUser.pending_device_change
             "
-            class="admin-card max-w-xl space-y-4 p-4"
+            title="Registered mobile device"
+            description="Each employee may sign in on one approved device. A new phone requires administrator approval."
         >
-            <div>
-                <p class="text-sm font-medium">Registered mobile device</p>
-                <p class="mt-1 text-sm text-muted-foreground">
-                    Each employee may sign in on one approved device. A new
-                    phone requires administrator approval.
-                </p>
-            </div>
-
             <div
                 v-if="managedUser.registered_device"
                 class="rounded-lg bg-muted/40 p-4 text-sm"
@@ -280,21 +265,16 @@ defineOptions({
                     </Button>
                 </Form>
             </div>
-        </div>
+        </AdminFormSection>
 
-        <div
+        <AdminFormSection
             v-if="managedUser.can.revokeTokens"
-            class="admin-card max-w-xl p-4"
+            title="Mobile sessions"
+            description="Revoke all Sanctum tokens on the employee’s assigned device. They must sign in again in the Flutter app."
         >
-            <p class="text-sm font-medium">Mobile sessions</p>
-            <p class="mt-1 text-sm text-muted-foreground">
-                Revoke all Sanctum tokens on the employee’s assigned device.
-                They must sign in again in the Flutter app.
-            </p>
             <Form
                 :action="UserController.revokeTokens.url(managedUser.id)"
                 method="post"
-                class="mt-4"
                 v-slot="{ processing }"
             >
                 <Button
@@ -306,6 +286,8 @@ defineOptions({
                     Revoke mobile sessions
                 </Button>
             </Form>
+        </AdminFormSection>
+            </aside>
         </div>
     </div>
 </template>

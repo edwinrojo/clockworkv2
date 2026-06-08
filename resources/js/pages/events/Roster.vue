@@ -2,7 +2,8 @@
 import { Form, Head, Link } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import EventRosterController from '@/actions/App/Http/Controllers/EventRosterController';
-import Heading from '@/components/Heading.vue';
+import AdminFormSection from '@/components/admin/AdminFormSection.vue';
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -42,9 +43,7 @@ const scope = ref(props.roster.scope);
 const selectedDepartments = ref<string[]>([...props.roster.department_ids]);
 const selectedEmployees = ref<string[]>([...props.roster.user_ids]);
 
-const showDepartments = computed(
-    () => scope.value === 'departments',
-);
+const showDepartments = computed(() => scope.value === 'departments');
 const showEmployees = computed(() => scope.value === 'employees');
 
 function toggleDepartment(id: string, checked: boolean): void {
@@ -74,54 +73,61 @@ const selectClass =
 <template>
     <Head :title="`${event.title} — Expected roster`" />
 
-    <div class="flex flex-col gap-6 p-4">
-        <div class="flex flex-wrap items-center justify-between gap-4">
-            <Heading
-                :title="event.title"
-                :description="`Expected attendance roster · ${event.status_label}`"
-            />
-            <div class="flex gap-2">
+    <div class="admin-page">
+        <AdminPageHeader
+            :title="event.title"
+            :description="`Expected attendance roster · ${event.status_label}`"
+        >
+            <template #actions>
                 <Button variant="outline" as-child>
                     <Link :href="live(event.id)">Live ops</Link>
                 </Button>
-                <Button variant="outline" as-child>
-                    <Link :href="eventsIndex()">Back</Link>
-                </Button>
-            </div>
-        </div>
+            </template>
+        </AdminPageHeader>
 
         <Form
             :action="EventRosterController.update.url(event.id)"
             method="put"
-            class="admin-card max-w-2xl space-y-6 p-4"
+            class="space-y-6"
             v-slot="{ errors, processing }"
         >
-            <div class="grid gap-2">
-                <Label for="roster_scope">Who is expected to attend?</Label>
-                <select
-                    id="roster_scope"
-                    name="roster_scope"
-                    v-model="scope"
-                    :class="selectClass"
-                >
-                    <option
-                        v-for="option in scopes"
-                        :key="option.value"
-                        :value="option.value"
-                    >
-                        {{ option.label }}
-                    </option>
-                </select>
-                <InputError :message="errors.roster_scope" />
-                <p class="text-xs text-muted-foreground">
-                    Missing-employee counts on the live page use this roster.
-                </p>
-            </div>
+            <AdminFormSection
+                title="Roster scope"
+                description="Choose who should be counted as expected on the live operations page."
+            >
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div class="grid gap-2">
+                        <Label for="roster_scope">Who is expected to attend?</Label>
+                        <select
+                            id="roster_scope"
+                            name="roster_scope"
+                            v-model="scope"
+                            :class="selectClass"
+                        >
+                            <option
+                                v-for="option in scopes"
+                                :key="option.value"
+                                :value="option.value"
+                            >
+                                {{ option.label }}
+                            </option>
+                        </select>
+                        <InputError :message="errors.roster_scope" />
+                    </div>
+                    <p class="flex items-end text-sm text-muted-foreground">
+                        Missing-employee counts on the live page use this
+                        roster.
+                    </p>
+                </div>
+            </AdminFormSection>
 
-            <div v-if="showDepartments" class="space-y-2">
-                <Label>Departments</Label>
+            <AdminFormSection
+                v-if="showDepartments"
+                title="Departments"
+                description="Select offices whose employees are expected to attend."
+            >
                 <div
-                    class="max-h-64 space-y-2 overflow-y-auto rounded-md border p-3"
+                    class="grid max-h-80 gap-2 overflow-y-auto rounded-lg bg-muted/30 p-4 sm:grid-cols-2 lg:grid-cols-3"
                 >
                     <label
                         v-for="department in departments"
@@ -147,12 +153,15 @@ const selectClass =
                     </label>
                 </div>
                 <InputError :message="errors.department_ids" />
-            </div>
+            </AdminFormSection>
 
-            <div v-if="showEmployees" class="space-y-2">
-                <Label>Employees</Label>
+            <AdminFormSection
+                v-if="showEmployees"
+                title="Employees"
+                description="Select individual employees expected to attend."
+            >
                 <div
-                    class="max-h-64 space-y-2 overflow-y-auto rounded-md border p-3"
+                    class="grid max-h-80 gap-2 overflow-y-auto rounded-lg bg-muted/30 p-4 sm:grid-cols-2 lg:grid-cols-3"
                 >
                     <label
                         v-for="employee in employees"
@@ -171,17 +180,19 @@ const selectClass =
                                 )
                             "
                         />
-                        {{ employee.name }}
-                        <span
-                            v-if="employee.employee_number"
-                            class="text-muted-foreground"
-                        >
-                            ({{ employee.employee_number }})
+                        <span>
+                            {{ employee.name }}
+                            <span
+                                v-if="employee.employee_number"
+                                class="text-muted-foreground"
+                            >
+                                ({{ employee.employee_number }})
+                            </span>
                         </span>
                     </label>
                 </div>
                 <InputError :message="errors.user_ids" />
-            </div>
+            </AdminFormSection>
 
             <Button type="submit" :disabled="processing">
                 Save expected roster

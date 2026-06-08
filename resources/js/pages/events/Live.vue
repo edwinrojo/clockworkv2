@@ -4,6 +4,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import EventDisplayPinController from '@/actions/App/Http/Controllers/EventDisplayPinController';
 import EventSessionController from '@/actions/App/Http/Controllers/EventSessionController';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import AdminTable from '@/components/admin/AdminTable.vue';
 import EventStatusBadge from '@/components/admin/EventStatusBadge.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
@@ -160,7 +161,7 @@ onUnmounted(() => {
 <template>
     <Head :title="`${event.title} — Live`" />
 
-    <div class="flex flex-col gap-6 p-4">
+    <div class="admin-page">
         <AdminPageHeader
             :title="event.title"
             description="Run check-in session and monitor attendance in real time"
@@ -179,38 +180,38 @@ onUnmounted(() => {
         </AdminPageHeader>
 
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div
-                class="admin-card p-4"
-            >
+            <div class="admin-stat-card">
+                <div class="admin-stat-card-accent" />
                 <p class="text-sm text-muted-foreground">Expected</p>
-                <p class="text-2xl font-bold tabular-nums">
+                <p class="mt-2 text-3xl font-bold tabular-nums">
                     {{ rosterStats.expected }}
                 </p>
                 <p class="mt-1 text-xs text-muted-foreground">
                     {{ rosterStats.roster_scope_label }}
                 </p>
             </div>
-            <div
-                class="admin-card p-4"
-            >
+            <div class="admin-stat-card">
+                <div
+                    class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-emerald-500/40"
+                />
                 <p class="text-sm text-muted-foreground">Checked in</p>
-                <p class="text-2xl font-bold tabular-nums text-emerald-600">
+                <p class="mt-2 text-3xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
                     {{ rosterStats.checked_in }}
                 </p>
             </div>
-            <div
-                class="admin-card p-4"
-            >
+            <div class="admin-stat-card">
+                <div
+                    class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 to-amber-500/40"
+                />
                 <p class="text-sm text-muted-foreground">Missing</p>
-                <p class="text-2xl font-bold tabular-nums text-amber-600">
+                <p class="mt-2 text-3xl font-bold tabular-nums text-amber-600 dark:text-amber-400">
                     {{ rosterStats.missing }}
                 </p>
             </div>
-            <div
-                class="admin-card p-4"
-            >
+            <div class="admin-stat-card">
+                <div class="admin-stat-card-accent" />
                 <p class="text-sm text-muted-foreground">Late</p>
-                <p class="text-2xl font-bold tabular-nums">
+                <p class="mt-2 text-3xl font-bold tabular-nums">
                     {{ rosterStats.late }}
                 </p>
             </div>
@@ -346,7 +347,7 @@ onUnmounted(() => {
                     </Button>
                 </div>
 
-                <div class="border-t pt-4">
+                <div class="border-t border-border/15 pt-4">
                     <p class="text-sm font-medium">Venue display</p>
                     <p class="mt-1 text-sm text-muted-foreground">
                         Open this URL on a projector or kiosk at the venue:
@@ -371,7 +372,7 @@ onUnmounted(() => {
                     v-if="can.manageSession"
                     :action="EventDisplayPinController.update.url(event.id)"
                     method="post"
-                    class="space-y-3 border-t pt-4"
+                    class="space-y-3 border-t border-border/15 pt-4"
                     v-slot="{ errors, processing }"
                 >
                     <p class="text-sm font-medium">Display PIN</p>
@@ -394,75 +395,59 @@ onUnmounted(() => {
                 </Form>
             </div>
 
-            <div
-                class="admin-card p-4 lg:col-span-2"
+            <AdminTable
+                class="lg:col-span-2"
+                :title="`Recent check-ins (${event.attendances_count})`"
+                compact
             >
-                <div class="mb-4 flex items-center justify-between">
-                    <h2 class="font-semibold">Recent check-ins</h2>
-                    <span class="text-2xl font-bold tabular-nums">{{
-                        event.attendances_count
-                    }}</span>
-                </div>
-
-                <table class="w-full text-sm">
-                    <thead class="border-b text-left text-muted-foreground">
-                        <tr>
-                            <th class="pb-2 font-medium">Employee</th>
-                            <th class="pb-2 font-medium">Time</th>
-                            <th class="pb-2 font-medium">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            v-for="row in recentAttendances"
-                            :key="row.id"
-                            class="border-b last:border-0"
-                        >
-                            <td class="py-2">
-                                <div>{{ row.employee_name }}</div>
-                                <div
-                                    v-if="row.employee_number"
-                                    class="text-muted-foreground"
-                                >
-                                    {{ row.employee_number }}
-                                </div>
-                            </td>
-                            <td class="py-2 text-muted-foreground">
-                                {{ formatTime(row.checked_in_at) }}
-                            </td>
-                            <td class="py-2 text-muted-foreground">
-                                {{ row.status_label ?? row.status }}
-                            </td>
-                        </tr>
-                        <tr v-if="recentAttendances.length === 0">
-                            <td
-                                colspan="3"
-                                class="py-6 text-center text-muted-foreground"
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr
+                        v-for="row in recentAttendances"
+                        :key="row.id"
+                    >
+                        <td>
+                            <div>{{ row.employee_name }}</div>
+                            <div
+                                v-if="row.employee_number"
+                                class="text-muted-foreground"
                             >
-                                No check-ins yet.
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                                {{ row.employee_number }}
+                            </div>
+                        </td>
+                        <td class="text-muted-foreground">
+                            {{ formatTime(row.checked_in_at) }}
+                        </td>
+                        <td class="text-muted-foreground">
+                            {{ row.status_label ?? row.status }}
+                        </td>
+                    </tr>
+                    <tr v-if="recentAttendances.length === 0">
+                        <td colspan="3" class="py-10 text-center text-muted-foreground">
+                            No check-ins yet.
+                        </td>
+                    </tr>
+                </tbody>
+            </AdminTable>
         </div>
 
-        <div
-            class="admin-panel"
+        <AdminTable
+            :title="`Missing employees (${missingEmployees.length})`"
         >
-            <div
-                class="flex flex-col gap-4 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-            >
-                <h2 class="font-semibold">
-                    Missing employees ({{ missingEmployees.length }})
-                </h2>
+            <template #toolbar>
                 <div class="flex items-center gap-2">
-                    <Label for="department_filter" class="sr-only"
-                        >Department</Label
-                    >
+                    <Label for="department_filter" class="sr-only">
+                        Department
+                    </Label>
                     <select
                         id="department_filter"
-                        class="flex h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+                        class="flex h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm"
                         :value="filters.department_id ?? ''"
                         @change="
                             filterByDepartment(
@@ -480,40 +465,34 @@ onUnmounted(() => {
                         </option>
                     </select>
                 </div>
-            </div>
-            <table class="w-full text-sm">
-                <thead class="border-b bg-muted/30 text-left">
-                    <tr>
-                        <th class="px-4 py-3 font-medium">Employee</th>
-                        <th class="px-4 py-3 font-medium">Department</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="employee in missingEmployees"
-                        :key="employee.id"
-                        class="border-b last:border-0"
-                    >
-                        <td class="px-4 py-3">
-                            <div class="font-medium">{{ employee.name }}</div>
-                            <div class="text-muted-foreground">
-                                {{ employee.employee_number ?? '—' }}
-                            </div>
-                        </td>
-                        <td class="px-4 py-3 text-muted-foreground">
-                            {{ employee.department_name ?? '—' }}
-                        </td>
-                    </tr>
-                    <tr v-if="missingEmployees.length === 0">
-                        <td
-                            colspan="2"
-                            class="px-4 py-8 text-center text-muted-foreground"
-                        >
-                            Everyone expected has checked in.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+            </template>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr
+                    v-for="employee in missingEmployees"
+                    :key="employee.id"
+                >
+                    <td>
+                        <div class="font-medium">{{ employee.name }}</div>
+                        <div class="text-muted-foreground">
+                            {{ employee.employee_number ?? '—' }}
+                        </div>
+                    </td>
+                    <td class="text-muted-foreground">
+                        {{ employee.department_name ?? '—' }}
+                    </td>
+                </tr>
+                <tr v-if="missingEmployees.length === 0">
+                    <td colspan="2" class="py-10 text-center text-muted-foreground">
+                        Everyone expected has checked in.
+                    </td>
+                </tr>
+            </tbody>
+        </AdminTable>
     </div>
 </template>

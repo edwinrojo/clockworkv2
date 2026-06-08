@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import AdminFormSection from '@/components/admin/AdminFormSection.vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import AdminTable from '@/components/admin/AdminTable.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,7 +72,7 @@ function formatTime(iso: string): string {
 <template>
     <Head :title="`${event.title} — Attendances`" />
 
-    <div class="flex flex-col gap-6 p-4">
+    <div class="admin-page">
         <AdminPageHeader
             :title="event.title"
             :description="`${event.attendances_count} attendance records · ${event.venue_name ?? 'No venue'}`"
@@ -85,132 +87,123 @@ function formatTime(iso: string): string {
             </template>
         </AdminPageHeader>
 
-        <div
+        <AdminFormSection
             v-if="can.manageAttendances"
-            class="admin-card max-w-xl p-4"
+            title="Manual check-in"
+            description="Record attendance for an employee who could not use the mobile app."
         >
-            <h2 class="mb-4 font-semibold">Manual check-in</h2>
             <Form
                 :action="EventAttendanceController.store.url(event.id)"
                 method="post"
                 class="space-y-4"
                 v-slot="{ errors, processing }"
             >
-                <div class="grid gap-2">
-                    <Label for="user_id">Employee</Label>
-                    <select
-                        id="user_id"
-                        name="user_id"
-                        required
-                        class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                    >
-                        <option value="" disabled selected>
-                            Select employee
-                        </option>
-                        <option
-                            v-for="employee in employees"
-                            :key="employee.id"
-                            :value="employee.id"
+                <div class="grid gap-4 md:grid-cols-3">
+                    <div class="grid gap-2">
+                        <Label for="user_id">Employee</Label>
+                        <select
+                            id="user_id"
+                            name="user_id"
+                            required
+                            class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
                         >
-                            {{ employee.name }}
-                            <template v-if="employee.employee_number">
-                                ({{ employee.employee_number }})
-                            </template>
-                        </option>
-                    </select>
-                    <InputError :message="errors.user_id" />
-                </div>
+                            <option value="" disabled selected>
+                                Select employee
+                            </option>
+                            <option
+                                v-for="employee in employees"
+                                :key="employee.id"
+                                :value="employee.id"
+                            >
+                                {{ employee.name }}
+                                <template v-if="employee.employee_number">
+                                    ({{ employee.employee_number }})
+                                </template>
+                            </option>
+                        </select>
+                        <InputError :message="errors.user_id" />
+                    </div>
 
-                <div class="grid gap-2">
-                    <Label for="status">Status</Label>
-                    <select
-                        id="status"
-                        name="status"
-                        required
-                        class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                    >
-                        <option
-                            v-for="option in statusOptions"
-                            :key="option.value"
-                            :value="option.value"
+                    <div class="grid gap-2">
+                        <Label for="status">Status</Label>
+                        <select
+                            id="status"
+                            name="status"
+                            required
+                            class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
                         >
-                            {{ option.label }}
-                        </option>
-                    </select>
-                    <InputError :message="errors.status" />
-                </div>
+                            <option
+                                v-for="option in statusOptions"
+                                :key="option.value"
+                                :value="option.value"
+                            >
+                                {{ option.label }}
+                            </option>
+                        </select>
+                        <InputError :message="errors.status" />
+                    </div>
 
-                <div class="grid gap-2">
-                    <Label for="reason">Reason</Label>
-                    <Input
-                        id="reason"
-                        name="reason"
-                        required
-                        placeholder="Why is this check-in being recorded manually?"
-                    />
-                    <InputError :message="errors.reason" />
+                    <div class="grid gap-2 md:col-span-1">
+                        <Label for="reason">Reason</Label>
+                        <Input
+                            id="reason"
+                            name="reason"
+                            required
+                            placeholder="Why is this check-in being recorded manually?"
+                        />
+                        <InputError :message="errors.reason" />
+                    </div>
                 </div>
 
                 <Button type="submit" :disabled="processing">
                     Record attendance
                 </Button>
             </Form>
-        </div>
+        </AdminFormSection>
 
-        <div
-            class="admin-panel"
-        >
-            <table class="w-full text-sm">
-                <thead class="border-b bg-muted/50 text-left">
-                    <tr>
-                        <th class="px-4 py-3 font-medium">Employee</th>
-                        <th class="px-4 py-3 font-medium">Department</th>
-                        <th class="px-4 py-3 font-medium">Checked in</th>
-                        <th class="px-4 py-3 font-medium">Source</th>
-                        <th class="px-4 py-3 font-medium">Notes</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="row in attendances"
-                        :key="row.id"
-                        class="border-b last:border-0"
-                    >
-                        <td class="px-4 py-3">
-                            <div class="font-medium">{{ row.employee_name }}</div>
-                            <div class="text-muted-foreground">
-                                {{ row.employee_number ?? '—' }}
-                            </div>
-                        </td>
-                        <td class="px-4 py-3 text-muted-foreground">
-                            {{ row.department_name ?? '—' }}
-                        </td>
-                        <td class="px-4 py-3 text-muted-foreground">
-                            {{ formatTime(row.checked_in_at) }}
-                        </td>
-                        <td class="px-4 py-3 capitalize text-muted-foreground">
-                            {{ row.source }}
-                        </td>
-                        <td class="px-4 py-3 text-muted-foreground">
-                            <template v-if="row.manual_override_reason">
-                                {{ row.manual_override_reason }}
-                                <span v-if="row.manual_override_by_name">
-                                    ({{ row.manual_override_by_name }})
-                                </span>
-                            </template>
-                            <span v-else>—</span>
-                        </td>
-                    </tr>
-                    <tr v-if="attendances.length === 0">
-                        <td
-                            colspan="5"
-                            class="px-4 py-8 text-center text-muted-foreground"
-                        >
-                            No attendance records yet.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <AdminTable title="Attendance records">
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Checked in</th>
+                    <th>Source</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="row in attendances" :key="row.id">
+                    <td>
+                        <div class="font-medium">{{ row.employee_name }}</div>
+                        <div class="text-muted-foreground">
+                            {{ row.employee_number ?? '—' }}
+                        </div>
+                    </td>
+                    <td class="text-muted-foreground">
+                        {{ row.department_name ?? '—' }}
+                    </td>
+                    <td class="text-muted-foreground">
+                        {{ formatTime(row.checked_in_at) }}
+                    </td>
+                    <td class="text-muted-foreground capitalize">
+                        {{ row.source }}
+                    </td>
+                    <td class="text-muted-foreground">
+                        <template v-if="row.manual_override_reason">
+                            {{ row.manual_override_reason }}
+                            <span v-if="row.manual_override_by_name">
+                                ({{ row.manual_override_by_name }})
+                            </span>
+                        </template>
+                        <span v-else>—</span>
+                    </td>
+                </tr>
+                <tr v-if="attendances.length === 0">
+                    <td colspan="5" class="py-10 text-center text-muted-foreground">
+                        No attendance records yet.
+                    </td>
+                </tr>
+            </tbody>
+        </AdminTable>
     </div>
 </template>

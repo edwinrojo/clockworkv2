@@ -190,7 +190,7 @@ const features = [
                         <div
                             v-for="feature in features"
                             :key="feature.title"
-                            class="admin-card group p-6 transition-shadow hover:shadow-lg"
+                            class="admin-card elevation-hover group p-6"
                         >
                             <div
                                 class="mb-4 flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground"

@@ -2,6 +2,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import AdminTable from '@/components/admin/AdminTable.vue';
 import StatusBadge from '@/components/admin/StatusBadge.vue';
 import UserRoleBadge from '@/components/admin/UserRoleBadge.vue';
 import { Button } from '@/components/ui/button';
@@ -34,7 +35,7 @@ function deleteUser(id: string): void {
 <template>
     <Head title="Users" />
 
-    <div class="flex flex-col gap-6 p-4">
+    <div class="admin-page">
         <AdminPageHeader
             title="Users"
             description="Manage employee and admin accounts"
@@ -48,29 +49,23 @@ function deleteUser(id: string): void {
             </template>
         </AdminPageHeader>
 
-        <div
-            class="admin-panel"
-        >
-            <table class="w-full text-sm">
-                <thead class="border-b bg-muted/50 text-left">
+        <AdminTable>
+                <thead>
                     <tr>
-                        <th class="px-4 py-3 font-medium">Name</th>
-                        <th class="px-4 py-3 font-medium">Email</th>
-                        <th class="px-4 py-3 font-medium">Role</th>
-                        <th class="px-4 py-3 font-medium">Department</th>
-                        <th class="px-4 py-3 font-medium">Status</th>
-                        <th class="px-4 py-3 text-right font-medium">
-                            Actions
-                        </th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Department</th>
+                        <th>Status</th>
+                        <th class="text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr
                         v-for="managedUser in users"
                         :key="managedUser.id"
-                        class="border-b last:border-0"
                     >
-                        <td class="px-4 py-3">
+                        <td>
                             <div class="font-medium">
                                 {{ managedUser.name }}
                             </div>
@@ -81,22 +76,22 @@ function deleteUser(id: string): void {
                                 {{ managedUser.employee_number }}
                             </div>
                         </td>
-                        <td class="px-4 py-3 text-muted-foreground">
+                        <td class="text-muted-foreground">
                             {{ managedUser.email }}
                         </td>
-                        <td class="px-4 py-3">
+                        <td>
                             <UserRoleBadge
                                 :role="managedUser.role"
                                 :label="managedUser.role_label"
                             />
                         </td>
-                        <td class="px-4 py-3 text-muted-foreground">
+                        <td class="text-muted-foreground">
                             {{ managedUser.department_name ?? '—' }}
                         </td>
-                        <td class="px-4 py-3">
+                        <td>
                             <StatusBadge :active="managedUser.is_active" />
                         </td>
-                        <td class="px-4 py-3">
+                        <td>
                             <div
                                 class="flex items-center justify-end gap-2"
                             >
@@ -123,15 +118,11 @@ function deleteUser(id: string): void {
                         </td>
                     </tr>
                     <tr v-if="users.length === 0">
-                        <td
-                            colspan="6"
-                            class="px-4 py-8 text-center text-muted-foreground"
-                        >
+                        <td colspan="6" class="py-10 text-center text-muted-foreground">
                             No users found.
                         </td>
                     </tr>
                 </tbody>
-            </table>
-        </div>
+        </AdminTable>
     </div>
 </template>

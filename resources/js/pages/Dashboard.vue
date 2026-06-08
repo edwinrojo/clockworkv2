@@ -1,14 +1,18 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import {
     Activity,
     CalendarClock,
     CalendarDays,
+    Smartphone,
     Users,
 } from '@lucide/vue';
+import { computed } from 'vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import AdminTable from '@/components/admin/AdminTable.vue';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
+import { index as deviceRequestsIndex } from '@/routes/device-change-requests';
 import { live } from '@/routes/events';
 import { index as reportsIndex, show as reportShow } from '@/routes/reports';
 
@@ -76,11 +80,17 @@ const statCards = [
     },
 ] as const;
 
+const page = usePage();
+
 const statValues: Record<string, number> = {
     live_events_count: props.live_events_count,
     check_ins_today: props.check_ins_today,
     scheduled_this_week: props.scheduled_this_week,
 };
+
+const pendingDeviceRequests = computed(
+    () => page.props.auth.pending_device_change_requests_count ?? 0,
+);
 
 function formatTime(iso: string): string {
     return new Date(iso).toLocaleString();
@@ -90,21 +100,44 @@ function formatTime(iso: string): string {
 <template>
     <Head title="Dashboard" />
 
-    <div class="flex flex-col gap-6 p-4 md:p-6">
+    <div class="admin-page">
         <AdminPageHeader
             title="Operations dashboard"
             description="Live convocations and check-in activity at a glance"
         />
 
+        <Link
+            v-if="pendingDeviceRequests > 0"
+            :href="deviceRequestsIndex()"
+            class="admin-alert"
+        >
+            <div class="flex items-start gap-3">
+                <div
+                    class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                >
+                    <Smartphone class="size-5" />
+                </div>
+                <div>
+                    <p class="font-medium">
+                        {{ pendingDeviceRequests }} device change request{{
+                            pendingDeviceRequests === 1 ? '' : 's'
+                        }}
+                    </p>
+                    <p class="text-sm text-muted-foreground">
+                        Employees are waiting for approval to sign in on a new
+                        phone.
+                    </p>
+                </div>
+            </div>
+            <Button size="sm" class="shrink-0">Review</Button>
+        </Link>
+
         <div class="grid gap-4 sm:grid-cols-3">
             <div
                 v-for="card in statCards"
                 :key="card.key"
-                class="admin-card group relative overflow-hidden p-5 transition-shadow hover:shadow-md"
+                class="admin-stat-card"
             >
-                <div
-                    class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-primary/40"
-                />
                 <div class="flex items-start justify-between">
                     <div>
                         <p class="text-sm font-medium text-muted-foreground">
@@ -141,7 +174,7 @@ function formatTime(iso: string): string {
                     <li
                         v-for="event in live_events"
                         :key="event.id"
-                        class="admin-card-muted flex items-start justify-between gap-3 p-4 transition-shadow hover:shadow-md"
+                        class="admin-card-muted elevation-hover flex items-start justify-between gap-3 p-4"
                     >
                         <div>
                             <p class="font-medium">{{ event.title }}</p>
@@ -206,63 +239,54 @@ function formatTime(iso: string): string {
             </div>
         </div>
 
-        <div class="admin-panel">
-            <div class="bg-muted/20 px-5 py-4">
-                <h2 class="font-semibold">Recent check-ins</h2>
-            </div>
-            <div class="p-5">
-                <table
-                    v-if="recent_check_ins.length > 0"
-                    class="w-full text-sm"
+        <AdminTable title="Recent check-ins" compact>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Event</th>
+                    <th>Time</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr
+                    v-for="checkIn in recent_check_ins"
+                    :key="checkIn.id"
                 >
-                    <thead class="text-left text-muted-foreground">
-                        <tr>
-                            <th class="pb-3 font-medium">Employee</th>
-                            <th class="pb-3 font-medium">Event</th>
-                            <th class="pb-3 font-medium">Time</th>
-                            <th class="pb-3 font-medium">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            v-for="checkIn in recent_check_ins"
-                            :key="checkIn.id"
-                            class="border-t border-border/30 first:border-t-0"
+                    <td>
+                        {{ checkIn.employee_name }}
+                        <span
+                            v-if="checkIn.employee_number"
+                            class="text-muted-foreground"
                         >
-                            <td class="py-3">
-                                {{ checkIn.employee_name }}
-                                <span
-                                    v-if="checkIn.employee_number"
-                                    class="text-muted-foreground"
-                                >
-                                    ({{ checkIn.employee_number }})
-                                </span>
-                            </td>
-                            <td class="py-3">
-                                <Link
-                                    :href="reportShow(checkIn.event_id)"
-                                    class="font-medium text-primary hover:underline"
-                                >
-                                    {{ checkIn.event_title }}
-                                </Link>
-                            </td>
-                            <td class="py-3 text-muted-foreground">
-                                {{ formatTime(checkIn.checked_in_at) }}
-                            </td>
-                            <td class="py-3">
-                                <span
-                                    class="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
-                                >
-                                    {{ checkIn.status_label }}
-                                </span>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-                <p v-else class="text-sm text-muted-foreground">
-                    No check-ins recorded yet.
-                </p>
-            </div>
-        </div>
+                            ({{ checkIn.employee_number }})
+                        </span>
+                    </td>
+                    <td>
+                        <Link
+                            :href="reportShow(checkIn.event_id)"
+                            class="font-medium text-primary hover:underline"
+                        >
+                            {{ checkIn.event_title }}
+                        </Link>
+                    </td>
+                    <td class="text-muted-foreground">
+                        {{ formatTime(checkIn.checked_in_at) }}
+                    </td>
+                    <td>
+                        <span
+                            class="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
+                        >
+                            {{ checkIn.status_label }}
+                        </span>
+                    </td>
+                </tr>
+                <tr v-if="recent_check_ins.length === 0">
+                    <td colspan="4" class="py-10 text-center text-muted-foreground">
+                        No check-ins recorded yet.
+                    </td>
+                </tr>
+            </tbody>
+        </AdminTable>
     </div>
 </template>

@@ -2,6 +2,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import AdminTable from '@/components/admin/AdminTable.vue';
 import StatusBadge from '@/components/admin/StatusBadge.vue';
 import { Button } from '@/components/ui/button';
 import { create, destroy, edit, index } from '@/routes/venues';
@@ -32,7 +33,7 @@ function deleteVenue(id: string): void {
 <template>
     <Head title="Venues" />
 
-    <div class="flex flex-col gap-6 p-4">
+    <div class="admin-page">
         <AdminPageHeader
             title="Venues"
             description="Manage event locations and geofences"
@@ -40,81 +41,61 @@ function deleteVenue(id: string): void {
             create-label="Add venue"
         />
 
-        <div
-            class="admin-panel"
-        >
-            <table class="w-full text-sm">
-                <thead class="border-b bg-muted/50 text-left">
-                    <tr>
-                        <th class="px-4 py-3 font-medium">Name</th>
-                        <th class="px-4 py-3 font-medium">Coordinates</th>
-                        <th class="px-4 py-3 font-medium">Radius (m)</th>
-                        <th class="px-4 py-3 font-medium">Events</th>
-                        <th class="px-4 py-3 font-medium">Status</th>
-                        <th class="px-4 py-3 text-right font-medium">
-                            Actions
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="venue in venues"
-                        :key="venue.id"
-                        class="border-b last:border-0"
-                    >
-                        <td class="px-4 py-3">
-                            <div class="font-medium">{{ venue.name }}</div>
-                            <div
-                                v-if="venue.address"
-                                class="text-muted-foreground"
+        <AdminTable>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Coordinates</th>
+                    <th>Radius (m)</th>
+                    <th>Events</th>
+                    <th>Status</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="venue in venues" :key="venue.id">
+                    <td>
+                        <div class="font-medium">{{ venue.name }}</div>
+                        <div v-if="venue.address" class="text-muted-foreground">
+                            {{ venue.address }}
+                        </div>
+                    </td>
+                    <td class="text-muted-foreground">
+                        {{ venue.latitude }}, {{ venue.longitude }}
+                    </td>
+                    <td>{{ venue.geofence_radius_meters ?? '—' }}</td>
+                    <td>{{ venue.events_count }}</td>
+                    <td>
+                        <StatusBadge :active="venue.is_active" />
+                    </td>
+                    <td>
+                        <div class="flex items-center justify-end gap-2">
+                            <Button
+                                v-if="venue.can.update"
+                                variant="outline"
+                                size="sm"
+                                as-child
                             >
-                                {{ venue.address }}
-                            </div>
-                        </td>
-                        <td class="px-4 py-3 text-muted-foreground">
-                            {{ venue.latitude }}, {{ venue.longitude }}
-                        </td>
-                        <td class="px-4 py-3">
-                            {{ venue.geofence_radius_meters ?? '—' }}
-                        </td>
-                        <td class="px-4 py-3">{{ venue.events_count }}</td>
-                        <td class="px-4 py-3">
-                            <StatusBadge :active="venue.is_active" />
-                        </td>
-                        <td class="px-4 py-3">
-                            <div
-                                class="flex items-center justify-end gap-2"
+                                <Link :href="edit(venue.id)">Edit</Link>
+                            </Button>
+                            <Button
+                                v-if="venue.can.delete"
+                                variant="destructive"
+                                size="sm"
+                                type="button"
+                                @click="deleteVenue(venue.id)"
                             >
-                                <Button
-                                    v-if="venue.can.update"
-                                    variant="outline"
-                                    size="sm"
-                                    as-child
-                                >
-                                    <Link :href="edit(venue.id)">Edit</Link>
-                                </Button>
-                                <Button
-                                    v-if="venue.can.delete"
-                                    variant="destructive"
-                                    size="sm"
-                                    type="button"
-                                    @click="deleteVenue(venue.id)"
-                                >
-                                    Delete
-                                </Button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr v-if="venues.length === 0">
-                        <td
-                            colspan="6"
-                            class="px-4 py-8 text-center text-muted-foreground"
-                        >
-                            No venues yet.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+                                Delete
+                            </Button>
+                        </div>
+                    </td>
+                </tr>
+                <tr v-if="venues.length === 0">
+                    <td colspan="6" class="py-10 text-center text-muted-foreground">
+                        No venues yet.
+                    </td>
+                </tr>
+            </tbody>
+        </AdminTable>
     </div>
 </template>

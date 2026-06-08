@@ -2,6 +2,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import AdminTable from '@/components/admin/AdminTable.vue';
 import EventStatusBadge from '@/components/admin/EventStatusBadge.vue';
 import { Button } from '@/components/ui/button';
 import { attendances, create, destroy, edit, index, live } from '@/routes/events';
@@ -51,7 +52,7 @@ function deleteEvent(id: string): void {
 <template>
     <Head title="Events" />
 
-    <div class="flex flex-col gap-6 p-4">
+    <div class="admin-page">
         <AdminPageHeader
             title="Events"
             description="Schedule convocations and manage attendance settings"
@@ -59,53 +60,47 @@ function deleteEvent(id: string): void {
             create-label="Add event"
         />
 
-        <div
-            class="admin-panel"
-        >
-            <table class="w-full text-sm">
-                <thead class="border-b bg-muted/30 text-left">
+        <AdminTable>
+                <thead>
                     <tr>
-                        <th class="px-4 py-3 font-medium">Event</th>
-                        <th class="px-4 py-3 font-medium">Venue</th>
-                        <th class="px-4 py-3 font-medium">Schedule</th>
-                        <th class="px-4 py-3 font-medium">Status</th>
-                        <th class="px-4 py-3 font-medium">Attendance</th>
-                        <th class="px-4 py-3 text-right font-medium">
-                            Actions
-                        </th>
+                        <th>Event</th>
+                        <th>Venue</th>
+                        <th>Schedule</th>
+                        <th>Status</th>
+                        <th>Attendance</th>
+                        <th class="text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr
                         v-for="event in events"
                         :key="event.id"
-                        class="border-b last:border-0"
                     >
-                        <td class="px-4 py-3">
+                        <td>
                             <div class="font-medium">{{ event.title }}</div>
                             <div class="text-muted-foreground">
                                 {{ event.type_label }}
                             </div>
                         </td>
-                        <td class="px-4 py-3 text-muted-foreground">
+                        <td class="text-muted-foreground">
                             {{ event.venue_name ?? '—' }}
                         </td>
-                        <td class="px-4 py-3 text-muted-foreground">
+                        <td class="text-muted-foreground">
                             {{ formatSchedule(event) }}
                         </td>
-                        <td class="px-4 py-3">
+                        <td>
                             <EventStatusBadge
                                 :status="event.status"
                                 :label="event.status_label"
                             />
                         </td>
-                        <td class="px-4 py-3">
+                        <td>
                             {{ event.attendances_count }}
                             <span class="text-muted-foreground">
                                 ({{ event.sessions_count }} sessions)
                             </span>
                         </td>
-                        <td class="px-4 py-3">
+                        <td>
                             <div
                                 class="flex items-center justify-end gap-2"
                             >
@@ -148,15 +143,11 @@ function deleteEvent(id: string): void {
                         </td>
                     </tr>
                     <tr v-if="events.length === 0">
-                        <td
-                            colspan="6"
-                            class="px-4 py-8 text-center text-muted-foreground"
-                        >
+                        <td colspan="6" class="py-10 text-center text-muted-foreground">
                             No events scheduled yet.
                         </td>
                     </tr>
                 </tbody>
-            </table>
-        </div>
+        </AdminTable>
     </div>
 </template>

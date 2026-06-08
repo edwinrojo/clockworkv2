@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { Form, Head, Link } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import EventController from '@/actions/App/Http/Controllers/EventController';
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import EventForm from '@/components/events/EventForm.vue';
-import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { index } from '@/routes/events';
 import { edit as rosterEdit } from '@/routes/events/roster';
@@ -24,21 +24,17 @@ defineOptions({
 <template>
     <Head :title="`Edit ${event.title}`" />
 
-    <div class="flex flex-col gap-6 p-4">
-        <div class="flex items-center justify-between gap-4">
-            <Heading
-                :title="event.title"
-                description="Update event schedule and check-in settings"
-            />
-            <div class="flex gap-2">
+    <div class="admin-page">
+        <AdminPageHeader
+            :title="event.title"
+            description="Update event schedule and check-in settings"
+        >
+            <template #actions>
                 <Button variant="outline" as-child>
                     <Link :href="rosterEdit(event.id)">Expected roster</Link>
                 </Button>
-                <Button variant="outline" as-child>
-                    <Link :href="index()">Back</Link>
-                </Button>
-            </div>
-        </div>
+            </template>
+        </AdminPageHeader>
 
         <EventForm
             :form="EventController.update.form(event.id)"

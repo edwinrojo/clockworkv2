@@ -61,7 +61,7 @@ function deviceLabel(device: DeviceSummary | null): string {
 <template>
     <Head title="Device change requests" />
 
-    <div class="flex flex-col gap-6 p-4">
+    <div class="admin-page">
         <AdminPageHeader
             title="Device change requests"
             description="Review employee requests to sign in on a new phone"

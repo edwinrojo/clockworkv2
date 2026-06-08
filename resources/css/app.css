@@ -118,23 +118,108 @@
     }
 
     .glass-card {
-        @apply rounded-2xl bg-white/90 shadow-xl shadow-black/10 backdrop-blur-md dark:bg-card/90 dark:shadow-black/30;
+        @apply rounded-2xl border border-white/60 bg-white/90 backdrop-blur-md dark:border-white/10 dark:bg-card/90;
+        box-shadow: var(--elevation-glass);
     }
 
     .admin-panel {
-        @apply overflow-hidden rounded-2xl bg-card shadow-md shadow-black/5 dark:shadow-black/25;
+        @apply overflow-hidden rounded-2xl border border-border/70 bg-card;
+        box-shadow: var(--elevation-panel);
     }
 
     .admin-card {
-        @apply rounded-xl bg-card shadow-sm shadow-black/5 dark:shadow-black/20;
+        @apply rounded-xl border border-border/70 bg-card;
+        box-shadow: var(--elevation-card);
     }
 
     .admin-card-muted {
-        @apply rounded-xl bg-muted/40 shadow-sm shadow-black/5 dark:shadow-black/15;
+        @apply rounded-xl border border-border/50 bg-muted/40;
+        box-shadow: var(--elevation-muted);
+    }
+
+    .admin-page {
+        @apply flex flex-col gap-6 p-4 md:p-6;
+    }
+
+    .admin-panel-toolbar {
+        @apply flex flex-col gap-4 bg-muted/20 px-5 py-4 sm:flex-row sm:items-center sm:justify-between;
+    }
+
+    .admin-table {
+        @apply w-full text-sm;
+    }
+
+    .admin-table thead {
+        @apply bg-muted/25 text-left text-muted-foreground;
+    }
+
+    .admin-table thead th {
+        @apply px-4 py-3 font-medium;
+    }
+
+    .admin-table tbody tr {
+        @apply transition-colors hover:bg-muted/20;
+    }
+
+    .admin-table tbody tr + tr {
+        @apply border-t border-border/15;
+    }
+
+    .admin-table tbody td {
+        @apply px-4 py-3;
+    }
+
+    .admin-table-compact thead th {
+        @apply px-4 py-2.5;
+    }
+
+    .admin-table-compact tbody td {
+        @apply px-4 py-2.5;
+    }
+
+    .admin-stat-card {
+        @apply relative overflow-hidden rounded-xl border border-border/70 bg-card p-5 transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5;
+        box-shadow: var(--elevation-card);
+    }
+
+    .admin-stat-card:hover {
+        box-shadow: var(--elevation-card-hover);
+    }
+
+    .admin-stat-card-accent {
+        @apply absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-primary/40;
+    }
+
+    .admin-alert {
+        @apply flex flex-col gap-4 rounded-xl border border-border/70 border-l-4 border-l-primary bg-card p-4 sm:flex-row sm:items-center sm:justify-between;
+        box-shadow: var(--elevation-card);
+    }
+
+    .elevation-hover {
+        @apply transition-[box-shadow,transform] duration-200;
+    }
+
+    .elevation-hover:hover {
+        box-shadow: var(--elevation-card-hover);
+        transform: translateY(-2px);
     }
 }
 
 :root {
+    --elevation-muted:
+        0 1px 2px 0 rgb(112 0 42 / 0.03), 0 2px 6px -1px rgb(0 0 0 / 0.05);
+    --elevation-card:
+        0 1px 2px 0 rgb(112 0 42 / 0.04), 0 2px 8px -2px rgb(0 0 0 / 0.06),
+        0 8px 24px -4px rgb(0 0 0 / 0.08);
+    --elevation-card-hover:
+        0 2px 4px 0 rgb(112 0 42 / 0.06), 0 4px 14px -2px rgb(0 0 0 / 0.08),
+        0 14px 36px -4px rgb(0 0 0 / 0.12);
+    --elevation-panel:
+        0 1px 3px 0 rgb(112 0 42 / 0.04), 0 4px 16px -2px rgb(0 0 0 / 0.08),
+        0 16px 48px -8px rgb(0 0 0 / 0.1);
+    --elevation-glass:
+        0 4px 24px -4px rgb(112 0 42 / 0.08), 0 12px 40px -8px rgb(0 0 0 / 0.12);
+
     --brand: #70002a;
     --brand-foreground: #ffffff;
     --brand-muted: #f9eef2;
@@ -164,18 +249,32 @@
     --chart-4: hsl(43 74% 66%);
     --chart-5: hsl(27 87% 67%);
     --radius: 0.625rem;
-    --sidebar-background: hsl(337 55% 11%);
-    --sidebar-foreground: hsl(337 15% 92%);
+    --sidebar-background: hsl(0 0% 100%);
+    --sidebar-foreground: hsl(337 20% 12%);
     --sidebar-primary: hsl(337 100% 22%);
     --sidebar-primary-foreground: hsl(0 0% 100%);
-    --sidebar-accent: hsl(337 40% 18%);
-    --sidebar-accent-foreground: hsl(337 10% 96%);
-    --sidebar-border: hsl(337 35% 20%);
-    --sidebar-ring: hsl(337 80% 55%);
-    --sidebar: hsl(337 55% 11%);
+    --sidebar-accent: hsl(337 18% 96%);
+    --sidebar-accent-foreground: hsl(337 20% 12%);
+    --sidebar-border: hsl(337 12% 91%);
+    --sidebar-ring: hsl(337 100% 22%);
+    --sidebar: hsl(0 0% 100%);
 }
 
 .dark {
+    --elevation-muted:
+        0 1px 2px 0 rgb(0 0 0 / 0.25), 0 2px 8px -2px rgb(0 0 0 / 0.35);
+    --elevation-card:
+        0 1px 2px 0 rgb(0 0 0 / 0.3), 0 4px 12px -2px rgb(0 0 0 / 0.4),
+        0 10px 28px -4px rgb(0 0 0 / 0.45);
+    --elevation-card-hover:
+        0 2px 4px 0 rgb(0 0 0 / 0.35), 0 6px 18px -2px rgb(0 0 0 / 0.45),
+        0 16px 40px -4px rgb(0 0 0 / 0.5);
+    --elevation-panel:
+        0 1px 3px 0 rgb(0 0 0 / 0.35), 0 6px 20px -2px rgb(0 0 0 / 0.45),
+        0 18px 52px -8px rgb(0 0 0 / 0.55);
+    --elevation-glass:
+        0 4px 24px -4px rgb(0 0 0 / 0.45), 0 12px 40px -8px rgb(0 0 0 / 0.55);
+
     --brand-muted: hsl(337 30% 14%);
 
     --background: hsl(337 15% 6%);
@@ -202,15 +301,15 @@
     --chart-3: hsl(30 80% 55%);
     --chart-4: hsl(280 65% 60%);
     --chart-5: hsl(340 75% 55%);
-    --sidebar-background: hsl(337 40% 7%);
-    --sidebar-foreground: hsl(337 10% 92%);
+    --sidebar-background: hsl(337 20% 9%);
+    --sidebar-foreground: hsl(337 10% 96%);
     --sidebar-primary: hsl(337 75% 58%);
     --sidebar-primary-foreground: hsl(0 0% 100%);
-    --sidebar-accent: hsl(337 30% 14%);
+    --sidebar-accent: hsl(337 18% 14%);
     --sidebar-accent-foreground: hsl(337 10% 96%);
-    --sidebar-border: hsl(337 25% 14%);
+    --sidebar-border: hsl(337 18% 16%);
     --sidebar-ring: hsl(337 75% 58%);
-    --sidebar: hsl(337 40% 7%);
+    --sidebar: hsl(337 20% 9%);
 }
 
 @layer base {

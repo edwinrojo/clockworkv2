@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import AdminTable from '@/components/admin/AdminTable.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,7 +44,7 @@ function formatTime(iso: string): string {
 <template>
     <Head title="Audit log" />
 
-    <div class="flex flex-col gap-6 p-4">
+    <div class="admin-page">
         <AdminPageHeader
             title="Audit log"
             description="Track manual overrides, imports, and admin actions"
@@ -84,28 +85,25 @@ function formatTime(iso: string): string {
             <Button type="submit" variant="secondary">Filter</Button>
         </Form>
 
-        <div
-            class="admin-panel"
-        >
-            <table class="w-full text-sm">
-                <thead class="border-b bg-muted/50 text-left">
+        <AdminTable>
+                <thead>
                     <tr>
-                        <th class="px-4 py-3 font-medium">When</th>
-                        <th class="px-4 py-3 font-medium">Action</th>
-                        <th class="px-4 py-3 font-medium">User</th>
-                        <th class="px-4 py-3 font-medium">Details</th>
+                        <th>When</th>
+                        <th>Action</th>
+                        <th>User</th>
+                        <th>Details</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr
                         v-for="log in logs.data"
                         :key="log.id"
-                        class="border-b last:border-0 align-top"
+                        class="align-top"
                     >
-                        <td class="px-4 py-3 text-muted-foreground">
+                        <td class="text-muted-foreground">
                             {{ formatTime(log.created_at) }}
                         </td>
-                        <td class="px-4 py-3">
+                        <td>
                             <span class="font-medium">{{
                                 log.action_label
                             }}</span>
@@ -116,7 +114,7 @@ function formatTime(iso: string): string {
                                 {{ log.subject_type }}
                             </p>
                         </td>
-                        <td class="px-4 py-3">
+                        <td>
                             <p>{{ log.user_name ?? 'System' }}</p>
                             <p
                                 v-if="log.user_email"
@@ -125,7 +123,7 @@ function formatTime(iso: string): string {
                                 {{ log.user_email }}
                             </p>
                         </td>
-                        <td class="px-4 py-3">
+                        <td>
                             <pre
                                 v-if="log.properties"
                                 class="max-w-md overflow-x-auto rounded bg-muted/50 p-2 text-xs"
@@ -137,16 +135,12 @@ function formatTime(iso: string): string {
                         </td>
                     </tr>
                     <tr v-if="logs.data.length === 0">
-                        <td
-                            colspan="4"
-                            class="px-4 py-8 text-center text-muted-foreground"
-                        >
+                        <td colspan="4" class="py-10 text-center text-muted-foreground">
                             No audit entries found.
                         </td>
                     </tr>
                 </tbody>
-            </table>
-        </div>
+        </AdminTable>
 
         <div v-if="logs.links.length > 3" class="flex flex-wrap gap-2">
             <Button

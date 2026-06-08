@@ -22,7 +22,7 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-    <div class="grid gap-4 sm:grid-cols-2">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div class="grid gap-2">
             <Label for="first_name">First name</Label>
             <Input

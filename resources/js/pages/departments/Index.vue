@@ -2,6 +2,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import AdminTable from '@/components/admin/AdminTable.vue';
 import StatusBadge from '@/components/admin/StatusBadge.vue';
 import { Button } from '@/components/ui/button';
 import { create, destroy, edit, index } from '@/routes/departments';
@@ -32,7 +33,7 @@ function deleteDepartment(id: string): void {
 <template>
     <Head title="Departments" />
 
-    <div class="flex flex-col gap-6 p-4">
+    <div class="admin-page">
         <AdminPageHeader
             title="Departments"
             description="Manage provincial offices and divisions"
@@ -40,79 +41,61 @@ function deleteDepartment(id: string): void {
             create-label="Add department"
         />
 
-        <div
-            class="admin-panel"
-        >
-            <table class="w-full text-sm">
-                <thead class="border-b bg-muted/50 text-left">
-                    <tr>
-                        <th class="px-4 py-3 font-medium">Name</th>
-                        <th class="px-4 py-3 font-medium">Code</th>
-                        <th class="px-4 py-3 font-medium">Parent</th>
-                        <th class="px-4 py-3 font-medium">Employees</th>
-                        <th class="px-4 py-3 font-medium">Status</th>
-                        <th class="px-4 py-3 text-right font-medium">
-                            Actions
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="department in departments"
-                        :key="department.id"
-                        class="border-b last:border-0"
-                    >
-                        <td class="px-4 py-3 font-medium">
-                            {{ department.name }}
-                        </td>
-                        <td class="px-4 py-3 text-muted-foreground">
-                            {{ department.code ?? '—' }}
-                        </td>
-                        <td class="px-4 py-3 text-muted-foreground">
-                            {{ department.parent_name ?? '—' }}
-                        </td>
-                        <td class="px-4 py-3">
-                            {{ department.users_count }}
-                        </td>
-                        <td class="px-4 py-3">
-                            <StatusBadge :active="department.is_active" />
-                        </td>
-                        <td class="px-4 py-3">
-                            <div
-                                class="flex items-center justify-end gap-2"
+        <AdminTable>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Code</th>
+                    <th>Parent</th>
+                    <th>Employees</th>
+                    <th>Status</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr
+                    v-for="department in departments"
+                    :key="department.id"
+                >
+                    <td class="font-medium">{{ department.name }}</td>
+                    <td class="text-muted-foreground">
+                        {{ department.code ?? '—' }}
+                    </td>
+                    <td class="text-muted-foreground">
+                        {{ department.parent_name ?? '—' }}
+                    </td>
+                    <td>{{ department.users_count }}</td>
+                    <td>
+                        <StatusBadge :active="department.is_active" />
+                    </td>
+                    <td>
+                        <div class="flex items-center justify-end gap-2">
+                            <Button
+                                v-if="department.can.update"
+                                variant="outline"
+                                size="sm"
+                                as-child
                             >
-                                <Button
-                                    v-if="department.can.update"
-                                    variant="outline"
-                                    size="sm"
-                                    as-child
-                                >
-                                    <Link :href="edit(department.id)">
-                                        Edit
-                                    </Link>
-                                </Button>
-                                <Button
-                                    v-if="department.can.delete"
-                                    variant="destructive"
-                                    size="sm"
-                                    type="button"
-                                    @click="deleteDepartment(department.id)"
-                                >
-                                    Delete
-                                </Button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr v-if="departments.length === 0">
-                        <td
-                            colspan="6"
-                            class="px-4 py-8 text-center text-muted-foreground"
-                        >
-                            No departments yet.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+                                <Link :href="edit(department.id)">Edit</Link>
+                            </Button>
+                            <Button
+                                v-if="department.can.delete"
+                                variant="destructive"
+                                size="sm"
+                                type="button"
+                                @click="deleteDepartment(department.id)"
+                            >
+                                Delete
+                            </Button>
+                        </div>
+                    </td>
+                </tr>
+                <tr v-if="departments.length === 0">
+                    <td colspan="6" class="py-10 text-center text-muted-foreground">
+                        No departments yet.
+                    </td>
+                </tr>
+            </tbody>
+        </AdminTable>
     </div>
 </template>
