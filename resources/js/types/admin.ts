@@ -110,9 +110,31 @@ export type DepartmentOption = {
     name: string;
 };
 
+export type RegisteredDevice = {
+    device_name: string | null;
+    device_model: string | null;
+    platform: string | null;
+    os_version: string | null;
+    approved_at: string | null;
+    approved_by_name: string | null;
+    last_seen_at: string | null;
+};
+
+export type PendingDeviceChange = {
+    id: string;
+    device_name: string | null;
+    device_model: string | null;
+    platform: string | null;
+    os_version: string | null;
+    reason: string | null;
+    created_at: string;
+};
+
 export type UserRowAbilities = RowAbilities & {
     revokeTokens?: boolean;
     managePassword?: boolean;
+    unlinkDevice?: boolean;
+    reviewDeviceChange?: boolean;
 };
 
 export type UserRow = {
@@ -130,6 +152,8 @@ export type UserRow = {
     department_name: string | null;
     is_active: boolean;
     email_verified_at: string | null;
+    registered_device?: RegisteredDevice | null;
+    pending_device_change?: PendingDeviceChange | null;
     can: UserRowAbilities;
 };
 

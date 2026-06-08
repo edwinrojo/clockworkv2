@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\DeviceChangeRequest;
+use App\Models\User;
 use App\Support\Inertia\AdminPermissions;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -42,8 +44,20 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
                 'can' => AdminPermissions::for($request->user()),
+                'pending_device_change_requests_count' => self::pendingDeviceChangeRequestsCount($request),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
+    }
+
+    private static function pendingDeviceChangeRequestsCount(Request $request): int
+    {
+        $user = $request->user();
+
+        if ($user === null || ! $user->can('viewAny', User::class)) {
+            return 0;
+        }
+
+        return DeviceChangeRequest::query()->pending()->count();
     }
 }

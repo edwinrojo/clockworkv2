@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DeviceChangeRequestStatus;
 use App\Enums\UserRole;
 use App\Http\Requests\SetUserPasswordRequest;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
+use App\Models\DeviceChangeRequest;
 use App\Models\User;
 use App\Notifications\MobileResetPassword;
+use App\Services\Auth\DeviceRegistrationService;
 use App\Services\Auth\EmployeeEmailVerificationService;
 use App\Support\Admin\ActivityLogger;
 use App\Support\Admin\UserFormOptions;
@@ -20,7 +23,10 @@ use Inertia\Response;
 
 class UserController extends Controller
 {
-    public function __construct(private EmployeeEmailVerificationService $emailVerification) {}
+    public function __construct(
+        private EmployeeEmailVerificationService $emailVerification,
+        private DeviceRegistrationService $deviceRegistration,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -65,7 +71,13 @@ class UserController extends Controller
     {
         $this->authorize('update', $user);
 
-        $user->load('department:id,name');
+        $user->load([
+            'department:id,name',
+            'employeeDevice.approvedBy:id,first_name,middle_name,last_name,suffix',
+            'deviceChangeRequests' => fn ($query) => $query
+                ->where('status', DeviceChangeRequestStatus::Pending)
+                ->latest(),
+        ]);
 
         return Inertia::render('users/Edit', [
             'managedUser' => $this->userPayload($user, $request),
@@ -137,6 +149,28 @@ class UserController extends Controller
         Inertia::flash('toast', [
             'type' => 'success',
             'message' => __('Mobile sessions revoked for :name.', ['name' => $user->name]),
+        ]);
+
+        return back();
+    }
+
+    public function unlinkDevice(Request $request, User $user): RedirectResponse
+    {
+        $this->authorize('update', $user);
+
+        if (! $user->isEmployee()) {
+            return back()->withErrors([
+                'user' => __('Only employee devices can be unlinked.'),
+            ]);
+        }
+
+        $this->deviceRegistration->unlink($user);
+
+        ActivityLogger::log($request, 'employee_device_unlinked', $user);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('Registered device unlinked for :name. They must sign in again and request approval on a new device.', ['name' => $user->name]),
         ]);
 
         return back();
@@ -220,6 +254,14 @@ class UserController extends Controller
      */
     private function userPayload(User $user, Request $request): array
     {
+        $pendingDeviceChange = $user->relationLoaded('deviceChangeRequests')
+            ? $user->deviceChangeRequests->first()
+            : DeviceChangeRequest::query()
+                ->pending()
+                ->where('user_id', $user->id)
+                ->latest()
+                ->first();
+
         return [
             'id' => $user->id,
             'first_name' => $user->first_name,
@@ -235,11 +277,34 @@ class UserController extends Controller
             'department_name' => $user->department?->name,
             'is_active' => $user->is_active,
             'email_verified_at' => $user->email_verified_at?->toIso8601String(),
+            'registered_device' => $user->employeeDevice ? [
+                'device_name' => $user->employeeDevice->device_name,
+                'device_model' => $user->employeeDevice->device_model,
+                'platform' => $user->employeeDevice->platform,
+                'os_version' => $user->employeeDevice->os_version,
+                'approved_at' => $user->employeeDevice->approved_at?->toIso8601String(),
+                'approved_by_name' => $user->employeeDevice->approvedBy?->name,
+                'last_seen_at' => $user->employeeDevice->last_seen_at?->toIso8601String(),
+            ] : null,
+            'pending_device_change' => $pendingDeviceChange ? [
+                'id' => $pendingDeviceChange->id,
+                'device_name' => $pendingDeviceChange->device_name,
+                'device_model' => $pendingDeviceChange->device_model,
+                'platform' => $pendingDeviceChange->platform,
+                'os_version' => $pendingDeviceChange->os_version,
+                'reason' => $pendingDeviceChange->reason,
+                'created_at' => $pendingDeviceChange->created_at->toIso8601String(),
+            ] : null,
             'can' => [
                 'update' => $request->user()?->can('update', $user) ?? false,
                 'delete' => $request->user()?->can('delete', $user) ?? false,
                 'revokeTokens' => $user->isEmployee() && ($request->user()?->can('update', $user) ?? false),
                 'managePassword' => $user->isEmployee() && ($request->user()?->can('update', $user) ?? false),
+                'unlinkDevice' => $user->isEmployee()
+                    && $user->employeeDevice !== null
+                    && ($request->user()?->can('update', $user) ?? false),
+                'reviewDeviceChange' => $pendingDeviceChange !== null
+                    && ($request->user()?->can('review', $pendingDeviceChange) ?? false),
             ],
         ];
     }

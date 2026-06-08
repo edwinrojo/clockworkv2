@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\Contracts\PasskeyUser;
@@ -75,6 +76,16 @@ class User extends Authenticatable implements PasskeyUser
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class);
+    }
+
+    public function employeeDevice(): HasOne
+    {
+        return $this->hasOne(EmployeeDevice::class);
+    }
+
+    public function deviceChangeRequests(): HasMany
+    {
+        return $this->hasMany(DeviceChangeRequest::class);
     }
 
     public function createdEvents(): HasMany

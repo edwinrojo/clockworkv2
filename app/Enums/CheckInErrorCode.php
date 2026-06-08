@@ -12,6 +12,8 @@ enum CheckInErrorCode: string
     case InvalidQr = 'INVALID_QR';
     case AccountInactive = 'ACCOUNT_INACTIVE';
     case EmailNotVerified = 'EMAIL_NOT_VERIFIED';
+    case DeviceChangeRequired = 'DEVICE_CHANGE_REQUIRED';
+    case DeviceChangePending = 'DEVICE_CHANGE_PENDING';
 
     public function message(): string
     {
@@ -24,6 +26,8 @@ enum CheckInErrorCode: string
             self::InvalidQr => 'Invalid QR code.',
             self::AccountInactive => 'Your account is inactive.',
             self::EmailNotVerified => 'Confirm your email with the verification code we sent.',
+            self::DeviceChangeRequired => 'This device is not registered. An administrator must approve your device change before you can sign in.',
+            self::DeviceChangePending => 'Your device change request is waiting for administrator approval.',
         };
     }
 }

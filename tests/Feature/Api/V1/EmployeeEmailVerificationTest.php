@@ -26,6 +26,7 @@ class EmployeeEmailVerificationTest extends TestCase
         $this->postJson('/api/v1/auth/login', [
             'email' => 'unverified@clockwork.test',
             'password' => 'password',
+            'device_id' => 'test-device-001',
         ])
             ->assertForbidden()
             ->assertJsonPath('code', 'EMAIL_NOT_VERIFIED')
@@ -58,6 +59,7 @@ class EmployeeEmailVerificationTest extends TestCase
         $this->postJson('/api/v1/auth/login', [
             'email' => 'verify.me@clockwork.test',
             'password' => 'password',
+            'device_id' => 'test-device-001',
         ])->assertOk();
     }
 

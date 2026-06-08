@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\DeviceChangeRequestController;
 use App\Http\Controllers\DisplayUnlockController;
 use App\Http\Controllers\EventAttendanceController;
 use App\Http\Controllers\EventController;
@@ -55,7 +56,12 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::get('users/import', [UserImportController::class, 'create'])->name('users.import.create');
     Route::post('users/import', [UserImportController::class, 'store'])->name('users.import.store');
     Route::get('users/import/template', [UserImportController::class, 'template'])->name('users.import.template');
+    Route::get('device-change-requests', [DeviceChangeRequestController::class, 'index'])->name('device-change-requests.index');
+    Route::post('device-change-requests/{deviceChangeRequest}/approve', [DeviceChangeRequestController::class, 'approve'])->name('device-change-requests.approve');
+    Route::post('device-change-requests/{deviceChangeRequest}/reject', [DeviceChangeRequestController::class, 'reject'])->name('device-change-requests.reject');
+
     Route::post('users/{user}/revoke-tokens', [UserController::class, 'revokeTokens'])->name('users.revoke-tokens');
+    Route::post('users/{user}/unlink-device', [UserController::class, 'unlinkDevice'])->name('users.unlink-device');
     Route::post('users/{user}/send-email-verification', [UserController::class, 'sendEmailVerification'])->name('users.send-email-verification');
     Route::post('users/{user}/send-password-reset', [UserController::class, 'sendPasswordReset'])->name('users.send-password-reset');
     Route::post('users/{user}/set-password', [UserController::class, 'setPassword'])->name('users.set-password');

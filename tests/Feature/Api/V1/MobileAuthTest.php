@@ -20,6 +20,7 @@ class MobileAuthTest extends TestCase
         $response = $this->postJson('/api/v1/auth/login', [
             'email' => 'employee@example.com',
             'password' => 'password',
+            'device_id' => 'test-device-001',
         ]);
 
         $response->assertOk()
@@ -42,6 +43,7 @@ class MobileAuthTest extends TestCase
         $this->postJson('/api/v1/auth/login', [
             'email' => 'manager@example.com',
             'password' => 'password',
+            'device_id' => 'test-device-001',
         ])
             ->assertForbidden()
             ->assertJsonPath('code', 'UNAUTHORIZED');
@@ -56,6 +58,7 @@ class MobileAuthTest extends TestCase
         $this->postJson('/api/v1/auth/login', [
             'email' => 'inactive@example.com',
             'password' => 'password',
+            'device_id' => 'test-device-001',
         ])
             ->assertForbidden()
             ->assertJsonPath('code', 'ACCOUNT_INACTIVE');

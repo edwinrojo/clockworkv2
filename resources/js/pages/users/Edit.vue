@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
+import DeviceChangeRequestController from '@/actions/App/Http/Controllers/DeviceChangeRequestController';
 import UserController from '@/actions/App/Http/Controllers/UserController';
 import Heading from '@/components/Heading.vue';
 import UserForm from '@/components/users/UserForm.vue';
@@ -130,6 +131,155 @@ defineOptions({
                     Set password
                 </Button>
             </Form>
+        </div>
+
+        <div
+            v-if="
+                managedUser.can.revokeTokens ||
+                managedUser.registered_device ||
+                managedUser.pending_device_change
+            "
+            class="admin-card max-w-xl space-y-4 p-4"
+        >
+            <div>
+                <p class="text-sm font-medium">Registered mobile device</p>
+                <p class="mt-1 text-sm text-muted-foreground">
+                    Each employee may sign in on one approved device. A new
+                    phone requires administrator approval.
+                </p>
+            </div>
+
+            <div
+                v-if="managedUser.registered_device"
+                class="rounded-lg bg-muted/40 p-4 text-sm"
+            >
+                <p class="font-medium">
+                    {{
+                        [
+                            managedUser.registered_device.device_name,
+                            managedUser.registered_device.device_model,
+                        ]
+                            .filter(Boolean)
+                            .join(' · ') || 'Registered device'
+                    }}
+                </p>
+                <p
+                    v-if="managedUser.registered_device.platform"
+                    class="mt-1 text-muted-foreground"
+                >
+                    {{ managedUser.registered_device.platform }}
+                    <span v-if="managedUser.registered_device.os_version">
+                        · {{ managedUser.registered_device.os_version }}
+                    </span>
+                </p>
+                <p
+                    v-if="managedUser.registered_device.last_seen_at"
+                    class="mt-2 text-xs text-muted-foreground"
+                >
+                    Last seen
+                    {{
+                        new Date(
+                            managedUser.registered_device.last_seen_at,
+                        ).toLocaleString()
+                    }}
+                </p>
+            </div>
+
+            <div
+                v-else
+                class="rounded-lg border border-dashed p-4 text-sm text-muted-foreground"
+            >
+                No device registered yet. The first successful mobile login
+                will auto-register the employee’s phone.
+            </div>
+
+            <div
+                v-if="managedUser.pending_device_change"
+                class="space-y-3 rounded-lg border border-primary/15 bg-primary/5 p-4"
+            >
+                <p class="text-sm font-medium text-primary">
+                    Pending device change
+                </p>
+                <p class="text-sm">
+                    {{
+                        [
+                            managedUser.pending_device_change.device_name,
+                            managedUser.pending_device_change.device_model,
+                            managedUser.pending_device_change.platform,
+                        ]
+                            .filter(Boolean)
+                            .join(' · ')
+                    }}
+                </p>
+                <p
+                    v-if="managedUser.pending_device_change.reason"
+                    class="text-sm text-muted-foreground"
+                >
+                    “{{ managedUser.pending_device_change.reason }}”
+                </p>
+
+                <div
+                    v-if="managedUser.can.reviewDeviceChange"
+                    class="flex flex-wrap items-end gap-3 border-t border-primary/10 pt-3"
+                >
+                    <Form
+                        :action="
+                            DeviceChangeRequestController.approve.url(
+                                managedUser.pending_device_change.id,
+                            )
+                        "
+                        method="post"
+                        v-slot="{ processing }"
+                    >
+                        <Button type="submit" size="sm" :disabled="processing">
+                            Approve change
+                        </Button>
+                    </Form>
+                    <Form
+                        :action="
+                            DeviceChangeRequestController.reject.url(
+                                managedUser.pending_device_change.id,
+                            )
+                        "
+                        method="post"
+                        class="flex min-w-[14rem] flex-1 flex-col gap-2"
+                        v-slot="{ processing }"
+                    >
+                        <textarea
+                            name="rejection_reason"
+                            rows="2"
+                            placeholder="Optional rejection reason"
+                            class="flex min-h-[4rem] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                        />
+                        <Button
+                            type="submit"
+                            variant="outline"
+                            size="sm"
+                            :disabled="processing"
+                        >
+                            Reject
+                        </Button>
+                    </Form>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-3">
+                <Form
+                    v-if="managedUser.can.unlinkDevice"
+                    :action="UserController.unlinkDevice.url(managedUser.id)"
+                    method="post"
+                    v-slot="{ processing }"
+                >
+                    <Button
+                        type="submit"
+                        variant="outline"
+                        size="sm"
+                        :disabled="processing"
+                    >
+                        Unlink device
+                    </Button>
+                </Form>
+            </div>
         </div>
 
         <div

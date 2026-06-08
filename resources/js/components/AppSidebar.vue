@@ -7,6 +7,7 @@ import {
     ClipboardList,
     LayoutGrid,
     MapPin,
+    Smartphone,
     Users,
 } from '@lucide/vue';
 import { computed } from 'vue';
@@ -28,6 +29,7 @@ import { index as auditIndex } from '@/routes/audit-log';
 import { index as departmentsIndex } from '@/routes/departments';
 import { index as eventsIndex } from '@/routes/events';
 import { index as reportsIndex } from '@/routes/reports';
+import { index as deviceRequestsIndex } from '@/routes/device-change-requests';
 import { index as usersIndex } from '@/routes/users';
 import { index as venuesIndex } from '@/routes/venues';
 import type { NavItem } from '@/types';
@@ -89,6 +91,18 @@ const organizationNavItems = computed<NavItem[]>(() => {
             title: 'Users',
             href: usersIndex(),
             icon: Users,
+        });
+        items.push({
+            title: 'Device requests',
+            href: deviceRequestsIndex(),
+            icon: Smartphone,
+            badge:
+                page.props.auth.pending_device_change_requests_count > 0
+                    ? String(
+                          page.props.auth
+                              .pending_device_change_requests_count,
+                      )
+                    : undefined,
         });
     }
 

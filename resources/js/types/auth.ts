@@ -28,6 +28,7 @@ export type User = {
 export type Auth = {
     user: User;
     can: AdminCan;
+    pending_device_change_requests_count: number;
 };
 
 /* @chisel-passkeys */

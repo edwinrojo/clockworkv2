@@ -37,6 +37,7 @@ class UserTokenRevocationTest extends TestCase
         $this->postJson('/api/v1/auth/login', [
             'email' => 'employee@example.com',
             'password' => 'password',
+            'device_id' => 'device-a',
             'device_name' => 'PG-DDS-100',
         ])->assertOk();
 

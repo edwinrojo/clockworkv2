@@ -12,6 +12,7 @@ use App\Http\Requests\Api\V1\VerifyEmailRequest;
 use App\Http\Resources\Api\V1\UserResource;
 use App\Models\User;
 use App\Notifications\MobileResetPassword;
+use App\Services\Auth\DeviceRegistrationService;
 use App\Services\Auth\EmployeeEmailVerificationService;
 use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -23,7 +24,10 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
-    public function __construct(private EmployeeEmailVerificationService $emailVerification) {}
+    public function __construct(
+        private EmployeeEmailVerificationService $emailVerification,
+        private DeviceRegistrationService $deviceRegistration,
+    ) {}
 
     public function login(LoginRequest $request): JsonResponse
     {
@@ -62,6 +66,32 @@ class AuthController extends Controller
                 CheckInErrorCode::EmailNotVerified->value,
                 [],
                 ['verification_code_sent' => $codeSent],
+            );
+        }
+
+        $deviceResult = $this->deviceRegistration->attemptLogin(
+            $user,
+            $request->validated('device_id'),
+            [
+                'device_name' => $request->validated('device_name'),
+                'device_model' => $request->validated('device_model'),
+                'platform' => $request->validated('platform'),
+                'os_version' => $request->validated('os_version'),
+                'reason' => $request->validated('reason'),
+            ],
+        );
+
+        if (! $deviceResult->allowed) {
+            $code = $deviceResult->pending
+                ? CheckInErrorCode::DeviceChangePending
+                : CheckInErrorCode::DeviceChangeRequired;
+
+            return ApiResponse::error(
+                $code->message(),
+                403,
+                $code->value,
+                [],
+                ['device_change_request_id' => $deviceResult->deviceChangeRequestId],
             );
         }
 

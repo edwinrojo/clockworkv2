@@ -4,6 +4,7 @@ import {
     SidebarGroup,
     SidebarGroupLabel,
     SidebarMenu,
+    SidebarMenuBadge,
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
@@ -36,6 +37,9 @@ const { isCurrentUrl } = useCurrentUrl();
                     <Link :href="item.href">
                         <component :is="item.icon" />
                         <span>{{ item.title }}</span>
+                        <SidebarMenuBadge v-if="item.badge">
+                            {{ item.badge }}
+                        </SidebarMenuBadge>
                     </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
