@@ -49,7 +49,7 @@ function deleteUser(id: string): void {
         </AdminPageHeader>
 
         <div
-            class="overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+            class="admin-panel"
         >
             <table class="w-full text-sm">
                 <thead class="border-b bg-muted/50 text-left">

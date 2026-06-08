@@ -43,7 +43,7 @@ defineOptions({
 
         <div
             v-if="managedUser.can.managePassword && !managedUser.email_verified_at"
-            class="max-w-xl space-y-4 rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+            class="admin-card max-w-xl space-y-4 p-4"
         >
             <p class="text-sm font-medium">Email verification</p>
             <p class="text-sm text-muted-foreground">
@@ -70,7 +70,7 @@ defineOptions({
 
         <div
             v-if="managedUser.can.managePassword"
-            class="max-w-xl space-y-4 rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+            class="admin-card max-w-xl space-y-4 p-4"
         >
             <p class="text-sm font-medium">Employee password</p>
             <p class="text-sm text-muted-foreground">
@@ -134,7 +134,7 @@ defineOptions({
 
         <div
             v-if="managedUser.can.revokeTokens"
-            class="max-w-xl rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+            class="admin-card max-w-xl p-4"
         >
             <p class="text-sm font-medium">Mobile sessions</p>
             <p class="mt-1 text-sm text-muted-foreground">

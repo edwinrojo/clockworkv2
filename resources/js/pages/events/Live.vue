@@ -180,7 +180,7 @@ onUnmounted(() => {
 
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div
-                class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                class="admin-card p-4"
             >
                 <p class="text-sm text-muted-foreground">Expected</p>
                 <p class="text-2xl font-bold tabular-nums">
@@ -191,7 +191,7 @@ onUnmounted(() => {
                 </p>
             </div>
             <div
-                class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                class="admin-card p-4"
             >
                 <p class="text-sm text-muted-foreground">Checked in</p>
                 <p class="text-2xl font-bold tabular-nums text-emerald-600">
@@ -199,7 +199,7 @@ onUnmounted(() => {
                 </p>
             </div>
             <div
-                class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                class="admin-card p-4"
             >
                 <p class="text-sm text-muted-foreground">Missing</p>
                 <p class="text-2xl font-bold tabular-nums text-amber-600">
@@ -207,7 +207,7 @@ onUnmounted(() => {
                 </p>
             </div>
             <div
-                class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                class="admin-card p-4"
             >
                 <p class="text-sm text-muted-foreground">Late</p>
                 <p class="text-2xl font-bold tabular-nums">
@@ -218,7 +218,7 @@ onUnmounted(() => {
 
         <div class="grid gap-6 lg:grid-cols-3">
             <div
-                class="space-y-4 rounded-xl border border-sidebar-border/70 p-4 lg:col-span-1 dark:border-sidebar-border"
+                class="admin-card space-y-4 p-4 lg:col-span-1"
             >
                 <div class="flex items-center justify-between">
                     <h2 class="font-semibold">Session</h2>
@@ -395,7 +395,7 @@ onUnmounted(() => {
             </div>
 
             <div
-                class="rounded-xl border border-sidebar-border/70 p-4 lg:col-span-2 dark:border-sidebar-border"
+                class="admin-card p-4 lg:col-span-2"
             >
                 <div class="mb-4 flex items-center justify-between">
                     <h2 class="font-semibold">Recent check-ins</h2>
@@ -448,7 +448,7 @@ onUnmounted(() => {
         </div>
 
         <div
-            class="rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+            class="admin-panel"
         >
             <div
                 class="flex flex-col gap-4 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between"

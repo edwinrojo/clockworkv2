@@ -76,7 +76,7 @@ defineOptions({
 
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div
-                class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                class="admin-card p-4"
             >
                 <p class="text-sm text-muted-foreground">Checked in</p>
                 <p class="text-3xl font-bold tabular-nums">
@@ -84,7 +84,7 @@ defineOptions({
                 </p>
             </div>
             <div
-                class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                class="admin-card p-4"
             >
                 <p class="text-sm text-muted-foreground">Missing</p>
                 <p class="text-3xl font-bold tabular-nums text-amber-600">
@@ -92,7 +92,7 @@ defineOptions({
                 </p>
             </div>
             <div
-                class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                class="admin-card p-4"
             >
                 <p class="text-sm text-muted-foreground">Late</p>
                 <p class="text-3xl font-bold tabular-nums">
@@ -100,7 +100,7 @@ defineOptions({
                 </p>
             </div>
             <div
-                class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                class="admin-card p-4"
             >
                 <p class="text-sm text-muted-foreground">Manual overrides</p>
                 <p class="text-3xl font-bold tabular-nums">
@@ -110,7 +110,7 @@ defineOptions({
         </div>
 
         <div
-            class="overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+            class="admin-panel"
         >
             <div class="border-b bg-muted/50 px-4 py-3 font-medium">
                 By department

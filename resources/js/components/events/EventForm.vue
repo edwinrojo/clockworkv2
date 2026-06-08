@@ -165,7 +165,7 @@ function removeDate(index: number): void {
             <InputError :message="errors.status" />
         </div>
 
-        <div class="space-y-4 rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+        <div class="admin-card space-y-4 p-4">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h3 class="font-medium">Event dates</h3>
@@ -194,7 +194,7 @@ function removeDate(index: number): void {
             <div
                 v-for="(row, index) in schedule"
                 :key="index"
-                class="space-y-3 rounded-lg border border-dashed p-4"
+                class="admin-card-muted space-y-3 p-4"
             >
                 <div class="flex items-center justify-between gap-2">
                     <p class="text-sm font-medium">

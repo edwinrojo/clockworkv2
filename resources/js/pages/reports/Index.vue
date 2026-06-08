@@ -59,7 +59,7 @@ function formatDate(iso: string): string {
         <Form
             :action="index.url()"
             method="get"
-            class="flex flex-wrap items-end gap-4 rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+            class="admin-card flex flex-wrap items-end gap-4 p-4"
         >
             <div class="grid gap-2">
                 <Label for="from">From</Label>
@@ -73,7 +73,7 @@ function formatDate(iso: string): string {
         </Form>
 
         <div
-            class="overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+            class="admin-panel"
         >
             <table class="w-full text-sm">
                 <thead class="border-b bg-muted/50 text-left">

@@ -67,7 +67,7 @@ defineOptions({
         </div>
 
         <div
-            class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+            class="admin-card p-4"
         >
             <p class="text-sm font-medium">CSV format (one department per file)</p>
             <p class="mt-1 text-sm text-muted-foreground">
@@ -90,7 +90,7 @@ defineOptions({
 
         <div
             v-if="importResult"
-            class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+            class="admin-card p-4"
         >
             <p class="text-sm font-medium">Import summary</p>
             <p class="mt-1 text-sm">
@@ -149,7 +149,7 @@ defineOptions({
             :action="UserImportController.store.url()"
             method="post"
             enctype="multipart/form-data"
-            class="max-w-lg space-y-4 rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+            class="admin-card max-w-lg space-y-4 p-4"
             v-slot="{ errors, processing }"
         >
             <div class="grid gap-2">

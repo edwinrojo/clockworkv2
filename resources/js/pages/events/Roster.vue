@@ -93,7 +93,7 @@ const selectClass =
         <Form
             :action="EventRosterController.update.url(event.id)"
             method="put"
-            class="max-w-2xl space-y-6 rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+            class="admin-card max-w-2xl space-y-6 p-4"
             v-slot="{ errors, processing }"
         >
             <div class="grid gap-2">

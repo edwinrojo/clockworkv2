@@ -240,7 +240,7 @@ watch(geofenceMode, () => {
 
         <div
             ref="mapContainer"
-            class="h-80 w-full overflow-hidden rounded-lg border border-sidebar-border/70"
+            class="h-80 w-full overflow-hidden rounded-lg shadow-sm shadow-black/5 dark:shadow-black/20"
         />
 
         <input type="hidden" name="latitude" :value="latitudeModel" />

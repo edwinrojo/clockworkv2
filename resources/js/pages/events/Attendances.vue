@@ -87,7 +87,7 @@ function formatTime(iso: string): string {
 
         <div
             v-if="can.manageAttendances"
-            class="max-w-xl rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+            class="admin-card max-w-xl p-4"
         >
             <h2 class="mb-4 font-semibold">Manual check-in</h2>
             <Form
@@ -158,7 +158,7 @@ function formatTime(iso: string): string {
         </div>
 
         <div
-            class="overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+            class="admin-panel"
         >
             <table class="w-full text-sm">
                 <thead class="border-b bg-muted/50 text-left">

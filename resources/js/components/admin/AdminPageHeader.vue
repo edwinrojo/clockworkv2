@@ -17,7 +17,9 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div
+        class="flex flex-col gap-4 rounded-2xl bg-gradient-to-r from-primary/5 via-transparent to-transparent p-5 shadow-sm shadow-black/5 sm:flex-row sm:items-center sm:justify-between dark:shadow-black/20"
+    >
         <Heading :title="title" :description="description" />
         <div class="flex flex-wrap items-center gap-2">
             <slot name="actions" />
