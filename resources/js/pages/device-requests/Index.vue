@@ -2,9 +2,13 @@
 import { Form, Head, Link } from '@inertiajs/vue3';
 import DeviceChangeRequestController from '@/actions/App/Http/Controllers/DeviceChangeRequestController';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import AdminPagination from '@/components/admin/AdminPagination.vue';
+import AdminTableFilters from '@/components/admin/AdminTableFilters.vue';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { edit as editUser } from '@/routes/users';
 import { index as deviceRequestsIndex } from '@/routes/device-change-requests';
+import type { Paginated, SelectOption, TableFilters } from '@/types/admin';
 
 type DeviceSummary = {
     device_name: string | null;
@@ -32,7 +36,9 @@ type DeviceChangeRequestRow = {
 };
 
 defineProps<{
-    requests: DeviceChangeRequestRow[];
+    requests: Paginated<DeviceChangeRequestRow>;
+    filters: TableFilters;
+    statuses: SelectOption[];
 }>();
 
 defineOptions({
@@ -67,16 +73,40 @@ function deviceLabel(device: DeviceSummary | null): string {
             description="Review employee requests to sign in on a new phone"
         />
 
+        <AdminTableFilters
+            :action="deviceRequestsIndex()"
+            :filters="filters"
+            search-placeholder="Employee name, email, or #"
+        >
+            <div class="grid gap-2">
+                <Label for="status">Status</Label>
+                <select
+                    id="status"
+                    name="status"
+                    class="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                >
+                    <option
+                        v-for="status in statuses"
+                        :key="status.value"
+                        :value="status.value"
+                        :selected="filters.status === status.value"
+                    >
+                        {{ status.label }}
+                    </option>
+                </select>
+            </div>
+        </AdminTableFilters>
+
         <div
-            v-if="requests.length === 0"
+            v-if="requests.data.length === 0"
             class="admin-card p-8 text-center text-sm text-muted-foreground"
         >
-            No pending device change requests.
+            No device change requests match your filters.
         </div>
 
         <div v-else class="flex flex-col gap-4">
             <article
-                v-for="request in requests"
+                v-for="request in requests.data"
                 :key="request.id"
                 class="admin-card space-y-4 p-5"
             >
@@ -104,7 +134,9 @@ function deviceLabel(device: DeviceSummary | null): string {
 
                 <div class="grid gap-4 md:grid-cols-2">
                     <div class="rounded-lg bg-muted/40 p-4">
-                        <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        <p
+                            class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                        >
                             Current device
                         </p>
                         <p class="mt-2 text-sm">
@@ -115,11 +147,17 @@ function deviceLabel(device: DeviceSummary | null): string {
                             class="mt-1 text-xs text-muted-foreground"
                         >
                             Last seen
-                            {{ formatTime(request.current_device.last_seen_at) }}
+                            {{
+                                formatTime(request.current_device.last_seen_at)
+                            }}
                         </p>
                     </div>
-                    <div class="rounded-lg border border-primary/15 bg-primary/5 p-4">
-                        <p class="text-xs font-medium uppercase tracking-wide text-primary">
+                    <div
+                        class="rounded-lg border border-primary/15 bg-primary/5 p-4"
+                    >
+                        <p
+                            class="text-xs font-medium uppercase tracking-wide text-primary"
+                        >
                             Requested device
                         </p>
                         <p class="mt-2 text-sm">
@@ -185,6 +223,10 @@ function deviceLabel(device: DeviceSummary | null): string {
                     </Form>
                 </div>
             </article>
+
+            <div class="admin-card p-4">
+                <AdminPagination :paginator="requests" />
+            </div>
         </div>
     </div>
 </template>

@@ -71,7 +71,7 @@ class EventManagementTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('events/Index')
-                ->has('events', 1)
+                ->has('events.data', 1)
             );
 
         $this->actingAs($viewer)

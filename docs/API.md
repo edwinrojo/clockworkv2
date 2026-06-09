@@ -158,7 +158,11 @@ Sends a password reset email to active employees only. Always returns the same m
 }
 ```
 
-The email link uses `CLOCKWORK_MOBILE_PASSWORD_RESET_URL` (default `clockwork://reset-password`) with `token` and `email` query parameters for the Flutter app.
+The email **Reset Password** button links to an HTTPS bridge page:
+
+`GET /mobile/reset-password?token=...&email=...`
+
+That page opens the Flutter app via `CLOCKWORK_MOBILE_PASSWORD_RESET_URL` (default `clockwork://reset-password?token=...&email=...`). Email clients block custom URL schemes in buttons, so the bridge is required.
 
 ### POST `/auth/reset-password`
 
@@ -424,8 +428,9 @@ New login on the same account **revokes all previous tokens** on the server (one
    CLOCKWORK_MOBILE_PASSWORD_RESET_URL=clockwork://reset-password
    ```
 2. Register the same scheme in Flutter (`AndroidManifest` intent filter, iOS URL types).
-3. Email link shape: `clockwork://reset-password?token=...&email=...`
-4. App screen: read query params → `POST /auth/reset-password` → redirect to login.
+3. Email button opens `GET {APP_URL}/mobile/reset-password?token=...&email=...` (HTTPS bridge).
+4. Bridge page redirects to `clockwork://reset-password?token=...&email=...`.
+5. App screen: read query params → `POST /auth/reset-password` → redirect to login.
 
 Mail must work in the environment where you test (`MAIL_*` in `.env`).
 

@@ -11,6 +11,7 @@ use App\Http\Controllers\EventDisplayPinController;
 use App\Http\Controllers\EventLiveController;
 use App\Http\Controllers\EventRosterController;
 use App\Http\Controllers\EventSessionController;
+use App\Http\Controllers\MobilePasswordResetController;
 use App\Http\Controllers\QrDisplayController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\UserController;
@@ -19,6 +20,9 @@ use App\Http\Controllers\VenueController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
+
+Route::get('mobile/reset-password', [MobilePasswordResetController::class, 'show'])
+    ->name('mobile.password-reset');
 
 Route::get('display/{displaySecret}/unlock', [DisplayUnlockController::class, 'create'])->name('display.unlock');
 Route::post('display/{displaySecret}/unlock', [DisplayUnlockController::class, 'store'])->name('display.unlock.store');
@@ -46,6 +50,7 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::get('events/{event}/attendances', [EventAttendanceController::class, 'index'])->name('events.attendances');
     Route::post('events/{event}/attendances', [EventAttendanceController::class, 'store'])->name('events.attendances.store');
     Route::get('events/{event}/attendances/export', [EventAttendanceController::class, 'export'])->name('events.attendances.export');
+    Route::get('events/{event}/attendances/export-attlog', [EventAttendanceController::class, 'exportAttlog'])->name('events.attendances.export-attlog');
 
     Route::post('events/{event}/display-pin', [EventDisplayPinController::class, 'update'])->name('events.display-pin.update');
 

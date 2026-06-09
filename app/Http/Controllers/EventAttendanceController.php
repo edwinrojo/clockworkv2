@@ -2,14 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AttendanceSource;
 use App\Enums\AttendanceStatus;
 use App\Enums\UserRole;
 use App\Exceptions\CheckInException;
 use App\Http\Requests\StoreManualAttendanceRequest;
 use App\Models\Attendance;
+use App\Models\Department;
 use App\Models\Event;
 use App\Models\User;
 use App\Services\Attendance\ManualAttendanceService;
+use App\Services\Exports\AttlogExportService;
+use App\Support\Admin\TableFilters;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -18,7 +22,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EventAttendanceController extends Controller
 {
-    public function __construct(private ManualAttendanceService $manualAttendanceService) {}
+    public function __construct(
+        private ManualAttendanceService $manualAttendanceService,
+        private AttlogExportService $attlogExportService,
+    ) {}
 
     public function index(Request $request, Event $event): Response
     {
@@ -26,12 +33,31 @@ class EventAttendanceController extends Controller
 
         $event->load('venue:id,name')->loadCount('attendances');
 
+        $filters = TableFilters::fromRequest($request, ['status', 'department_id', 'source']);
+
         $attendances = Attendance::query()
             ->where('event_id', $event->id)
             ->with(['user.department:id,name', 'manualOverrideBy:id,first_name,last_name'])
+            ->when($filters->searchLike(), function ($query, string $search): void {
+                $query->whereHas('user', function ($query) use ($search): void {
+                    $query->where('employee_number', 'like', $search)
+                        ->orWhere('first_name', 'like', $search)
+                        ->orWhere('last_name', 'like', $search);
+                });
+            })
+            ->when($filters->extraString('status'), fn ($query, string $status) => $query->where('status', $status))
+            ->when(
+                $filters->extraString('department_id'),
+                fn ($query, string $departmentId) => $query->whereHas(
+                    'user',
+                    fn ($query) => $query->where('department_id', $departmentId),
+                ),
+            )
+            ->when($filters->extraString('source'), fn ($query, string $source) => $query->where('source', $source))
             ->orderByDesc('checked_in_at')
-            ->get()
-            ->map(fn (Attendance $attendance) => [
+            ->paginate($filters->perPage)
+            ->withQueryString()
+            ->through(fn (Attendance $attendance) => [
                 'id' => $attendance->id,
                 'employee_name' => $attendance->user->name,
                 'employee_number' => $attendance->user->employee_number,
@@ -63,6 +89,19 @@ class EventAttendanceController extends Controller
                 'attendances_count' => $event->attendances_count,
             ],
             'attendances' => $attendances,
+            'filters' => $filters->toArray(),
+            'departments' => Department::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name']),
+            'statuses' => array_map(
+                fn (AttendanceStatus $case) => ['value' => $case->value, 'label' => $case->label()],
+                AttendanceStatus::cases(),
+            ),
+            'sources' => array_map(
+                fn (AttendanceSource $case) => ['value' => $case->value, 'label' => ucfirst($case->value)],
+                AttendanceSource::cases(),
+            ),
             'employees' => $employees,
             'can' => [
                 'manageAttendances' => $request->user()?->can('manageAttendances', $event) ?? false,
@@ -134,6 +173,25 @@ class EventAttendanceController extends Controller
             fclose($handle);
         }, $filename, [
             'Content-Type' => 'text/csv',
+        ]);
+    }
+
+    public function exportAttlog(Request $request, Event $event): StreamedResponse
+    {
+        $this->authorize('viewAttendances', $event);
+
+        $filename = $this->attlogExportService->filename();
+
+        return response()->streamDownload(function () use ($event): void {
+            $handle = fopen('php://output', 'w');
+
+            foreach ($this->attlogExportService->linesForEvent($event) as $line) {
+                fwrite($handle, $line.PHP_EOL);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/plain',
         ]);
     }
 }

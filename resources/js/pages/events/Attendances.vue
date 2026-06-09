@@ -3,14 +3,21 @@ import { Form, Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import AdminFormSection from '@/components/admin/AdminFormSection.vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import AdminPagination from '@/components/admin/AdminPagination.vue';
 import AdminTable from '@/components/admin/AdminTable.vue';
+import AdminTableFilters from '@/components/admin/AdminTableFilters.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import EventAttendanceController from '@/actions/App/Http/Controllers/EventAttendanceController';
 import { live, index } from '@/routes/events';
-import type { SelectOption } from '@/types/admin';
+import type {
+    DepartmentOption,
+    Paginated,
+    SelectOption,
+    TableFilters,
+} from '@/types/admin';
 
 type AttendanceRow = {
     id: string;
@@ -37,19 +44,17 @@ const props = defineProps<{
         venue_name: string | null;
         attendances_count: number;
     };
-    attendances: AttendanceRow[];
+    attendances: Paginated<AttendanceRow>;
+    filters: TableFilters;
+    departments: DepartmentOption[];
+    statuses: SelectOption[];
+    sources: SelectOption[];
     employees: EmployeeOption[];
     can: {
         manageAttendances: boolean;
         manageSession: boolean;
     };
 }>();
-
-const statusOptions: SelectOption[] = [
-    { value: 'present', label: 'Present' },
-    { value: 'late', label: 'Late' },
-    { value: 'manual_override', label: 'Manual override' },
-];
 
 defineOptions({
     layout: {
@@ -60,8 +65,12 @@ defineOptions({
     },
 });
 
-const exportUrl = computed(() =>
+const exportCsvUrl = computed(() =>
     EventAttendanceController.exportMethod.url(props.event.id),
+);
+
+const exportAttlogUrl = computed(() =>
+    EventAttendanceController.exportAttlog.url(props.event.id),
 );
 
 function formatTime(iso: string): string {
@@ -82,7 +91,10 @@ function formatTime(iso: string): string {
                     <Link :href="live(event.id)">Live operations</Link>
                 </Button>
                 <Button variant="outline" as-child>
-                    <a :href="exportUrl">Export CSV</a>
+                    <a :href="exportCsvUrl">Export CSV</a>
+                </Button>
+                <Button variant="outline" as-child>
+                    <a :href="exportAttlogUrl">Export ATTLOG</a>
                 </Button>
             </template>
         </AdminPageHeader>
@@ -133,7 +145,7 @@ function formatTime(iso: string): string {
                             class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
                         >
                             <option
-                                v-for="option in statusOptions"
+                                v-for="option in statuses"
                                 :key="option.value"
                                 :value="option.value"
                             >
@@ -161,6 +173,67 @@ function formatTime(iso: string): string {
             </Form>
         </AdminFormSection>
 
+        <AdminTableFilters
+            :action="EventAttendanceController.index.url(event.id)"
+            :filters="filters"
+            search-placeholder="Employee name or #"
+        >
+            <div class="grid gap-2">
+                <Label for="department_id">Department</Label>
+                <select
+                    id="department_id"
+                    name="department_id"
+                    class="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                >
+                    <option value="">All departments</option>
+                    <option
+                        v-for="department in departments"
+                        :key="department.id"
+                        :value="department.id"
+                        :selected="filters.department_id === department.id"
+                    >
+                        {{ department.name }}
+                    </option>
+                </select>
+            </div>
+            <div class="grid gap-2">
+                <Label for="status">Status</Label>
+                <select
+                    id="status"
+                    name="status"
+                    class="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                >
+                    <option value="">All statuses</option>
+                    <option
+                        v-for="option in statuses"
+                        :key="option.value"
+                        :value="option.value"
+                        :selected="filters.status === option.value"
+                    >
+                        {{ option.label }}
+                    </option>
+                </select>
+            </div>
+            <div class="grid gap-2">
+                <Label for="source">Source</Label>
+                <select
+                    id="source"
+                    name="source"
+                    class="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                >
+                    <option value="">All sources</option>
+                    <option
+                        v-for="option in sources"
+                        :key="option.value"
+                        :value="option.value"
+                        :selected="filters.source === option.value"
+                    >
+                        {{ option.label }}
+                    </option>
+                </select>
+            </div>
+        </AdminTableFilters>
+
         <AdminTable title="Attendance records">
             <thead>
                 <tr>
@@ -172,7 +245,7 @@ function formatTime(iso: string): string {
                 </tr>
             </thead>
             <tbody>
-                <tr v-for="row in attendances" :key="row.id">
+                <tr v-for="row in attendances.data" :key="row.id">
                     <td>
                         <div class="font-medium">{{ row.employee_name }}</div>
                         <div class="text-muted-foreground">
@@ -198,12 +271,15 @@ function formatTime(iso: string): string {
                         <span v-else>—</span>
                     </td>
                 </tr>
-                <tr v-if="attendances.length === 0">
+                <tr v-if="attendances.data.length === 0">
                     <td colspan="5" class="py-10 text-center text-muted-foreground">
                         No attendance records yet.
                     </td>
                 </tr>
             </tbody>
+            <template #footer>
+                <AdminPagination :paginator="attendances" />
+            </template>
         </AdminTable>
     </div>
 </template>

@@ -26,8 +26,8 @@ class DeviceChangeRequestTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('device-requests/Index')
-                ->has('requests', 1)
-                ->where('requests.0.employee.id', $employee->id));
+                ->has('requests.data', 1)
+                ->where('requests.data.0.employee.id', $employee->id));
     }
 
     public function test_admin_can_reject_device_change_request(): void

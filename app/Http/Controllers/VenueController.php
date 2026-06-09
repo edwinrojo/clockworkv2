@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreVenueRequest;
 use App\Http\Requests\UpdateVenueRequest;
 use App\Models\Venue;
+use App\Support\Admin\TableFilters;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,14 +17,28 @@ class VenueController extends Controller
     {
         $this->authorize('viewAny', Venue::class);
 
+        $filters = TableFilters::fromRequest($request, ['is_active']);
+
         $venues = Venue::query()
             ->withCount('events')
+            ->when($filters->searchLike(), function ($query, string $search): void {
+                $query->where(function ($query) use ($search): void {
+                    $query->where('name', 'like', $search)
+                        ->orWhere('address', 'like', $search);
+                });
+            })
+            ->when(
+                $filters->extraString('is_active') !== null,
+                fn ($query) => $query->where('is_active', $filters->extraString('is_active') === '1'),
+            )
             ->orderBy('name')
-            ->get()
-            ->map(fn (Venue $venue) => $this->venuePayload($venue, $request));
+            ->paginate($filters->perPage)
+            ->withQueryString()
+            ->through(fn (Venue $venue) => $this->venuePayload($venue, $request));
 
         return Inertia::render('venues/Index', [
             'venues' => $venues,
+            'filters' => $filters->toArray(),
         ]);
     }
 

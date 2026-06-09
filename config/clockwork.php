@@ -19,8 +19,9 @@ return [
     | Mobile password reset URL
     |--------------------------------------------------------------------------
     |
-    | Deep link or in-app route used in reset emails for the Flutter app.
-    | Query string includes token and email for POST /api/v1/auth/reset-password.
+    | Deep link opened by the mobile password-reset bridge page
+    | (`GET /mobile/reset-password`). Reset emails link to the HTTPS bridge;
+    | this URL is where the page redirects into the Flutter app.
     |
     */
 
@@ -66,5 +67,23 @@ return [
     'email_verification_code_ttl_minutes' => (int) env('CLOCKWORK_EMAIL_VERIFICATION_TTL', 30),
 
     'email_verification_code_length' => 6,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Legacy ATTLOG export (biometric HRIS import)
+    |--------------------------------------------------------------------------
+    |
+    | Tab-separated _attlog.dat files for the legacy Clockwork scanner import.
+    | Column 0 uses users.employee_number. Register a matching virtual scanner
+    | in the legacy system using device_uid.
+    |
+    */
+
+    'legacy_attlog_export' => [
+        'device_uid' => (int) env('CLOCKWORK_LEGACY_EXPORT_DEVICE_UID', 99),
+        'state' => (int) env('CLOCKWORK_LEGACY_EXPORT_STATE', 0),
+        'mode' => (int) env('CLOCKWORK_LEGACY_EXPORT_MODE', 3),
+        'work_code' => (int) env('CLOCKWORK_LEGACY_EXPORT_WORK_CODE', 0),
+    ],
 
 ];

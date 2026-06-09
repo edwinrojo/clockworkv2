@@ -2,15 +2,7 @@
 import { KeyRound, Trash2 } from '@lucide/vue';
 import { ref } from 'vue';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
+import { confirm } from '@/lib/confirm';
 import type { Passkey } from '@/types/auth';
 
 const props = defineProps<{
@@ -29,6 +21,21 @@ const handleDelete = () => {
         isDeleting.value = false;
     });
 };
+
+async function requestRemove(): Promise<void> {
+    const confirmed = await confirm({
+        title: 'Remove passkey?',
+        description: `You will no longer be able to use "${props.passkey.name}" to sign in.`,
+        confirmLabel: 'Remove passkey',
+        variant: 'destructive',
+    });
+
+    if (!confirmed || isDeleting.value) {
+        return;
+    }
+
+    handleDelete();
+}
 </script>
 
 <template>
@@ -59,37 +66,15 @@ const handleDelete = () => {
             </div>
         </div>
 
-        <Dialog>
-            <DialogTrigger as-child>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    class="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                >
-                    <Trash2 class="h-4 w-4" />
-                    <span class="sr-only">Remove</span>
-                </Button>
-            </DialogTrigger>
-
-            <DialogContent>
-                <DialogTitle>Remove passkey</DialogTitle>
-                <DialogDescription>
-                    Are you sure you want to remove the "{{ passkey.name }}"
-                    passkey? You will no longer be able to use it to sign in.
-                </DialogDescription>
-                <DialogFooter class="gap-2">
-                    <DialogClose as-child>
-                        <Button variant="secondary">Cancel</Button>
-                    </DialogClose>
-                    <Button
-                        variant="destructive"
-                        :disabled="isDeleting"
-                        @click="handleDelete"
-                    >
-                        {{ isDeleting ? 'Removing...' : 'Remove passkey' }}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+        <Button
+            variant="ghost"
+            size="sm"
+            class="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            :disabled="isDeleting"
+            @click="requestRemove"
+        >
+            <Trash2 class="h-4 w-4" />
+            <span class="sr-only">Remove</span>
+        </Button>
     </div>
 </template>

@@ -7,6 +7,7 @@ use App\Http\Requests\RejectDeviceChangeRequest;
 use App\Models\DeviceChangeRequest;
 use App\Services\Auth\DeviceRegistrationService;
 use App\Support\Admin\ActivityLogger;
+use App\Support\Admin\TableFilters;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -20,18 +21,38 @@ class DeviceChangeRequestController extends Controller
     {
         $this->authorize('viewAny', DeviceChangeRequest::class);
 
+        $filters = TableFilters::fromRequest($request, ['status']);
+        $status = $filters->extraString('status') ?? DeviceChangeRequestStatus::Pending->value;
+
         $requests = DeviceChangeRequest::query()
-            ->pending()
             ->with([
                 'user:id,first_name,middle_name,last_name,suffix,email,employee_number',
                 'user.employeeDevice',
             ])
-            ->orderBy('created_at')
-            ->get()
-            ->map(fn (DeviceChangeRequest $changeRequest) => $this->requestPayload($changeRequest, $request));
+            ->when($status !== null, fn ($query) => $query->where('status', $status))
+            ->when($filters->searchLike(), function ($query, string $search): void {
+                $query->whereHas('user', function ($query) use ($search): void {
+                    $query->where('email', 'like', $search)
+                        ->orWhere('employee_number', 'like', $search)
+                        ->orWhere('first_name', 'like', $search)
+                        ->orWhere('last_name', 'like', $search);
+                });
+            })
+            ->orderByDesc('created_at')
+            ->paginate($filters->perPage)
+            ->withQueryString()
+            ->through(fn (DeviceChangeRequest $changeRequest) => $this->requestPayload($changeRequest, $request));
 
         return Inertia::render('device-requests/Index', [
             'requests' => $requests,
+            'filters' => array_merge($filters->toArray(), ['status' => $status]),
+            'statuses' => array_map(
+                fn (DeviceChangeRequestStatus $case) => [
+                    'value' => $case->value,
+                    'label' => $case->label(),
+                ],
+                DeviceChangeRequestStatus::cases(),
+            ),
         ]);
     }
 

@@ -49,7 +49,7 @@ class DepartmentManagementTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('departments/Index')
-                ->has('departments', 1)
+                ->has('departments.data', 1)
             );
     }
 

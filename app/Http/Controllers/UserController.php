@@ -7,12 +7,14 @@ use App\Enums\UserRole;
 use App\Http\Requests\SetUserPasswordRequest;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
+use App\Models\Department;
 use App\Models\DeviceChangeRequest;
 use App\Models\User;
 use App\Notifications\MobileResetPassword;
 use App\Services\Auth\DeviceRegistrationService;
 use App\Services\Auth\EmployeeEmailVerificationService;
 use App\Support\Admin\ActivityLogger;
+use App\Support\Admin\TableFilters;
 use App\Support\Admin\UserFormOptions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,15 +34,38 @@ class UserController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
+        $filters = TableFilters::fromRequest($request, ['role', 'department_id', 'is_active']);
+
         $users = User::query()
             ->with('department:id,name')
+            ->when($filters->searchLike(), function ($query, string $search): void {
+                $query->where(function ($query) use ($search): void {
+                    $query->where('email', 'like', $search)
+                        ->orWhere('employee_number', 'like', $search)
+                        ->orWhere('first_name', 'like', $search)
+                        ->orWhere('last_name', 'like', $search);
+                });
+            })
+            ->when($filters->extraString('role'), fn ($query, string $role) => $query->where('role', $role))
+            ->when($filters->extraString('department_id'), fn ($query, string $departmentId) => $query->where('department_id', $departmentId))
+            ->when(
+                $filters->extraString('is_active') !== null,
+                fn ($query) => $query->where('is_active', $filters->extraString('is_active') === '1'),
+            )
             ->orderBy('last_name')
             ->orderBy('first_name')
-            ->get()
-            ->map(fn (User $user) => $this->userPayload($user, $request));
+            ->paginate($filters->perPage)
+            ->withQueryString()
+            ->through(fn (User $user) => $this->userPayload($user, $request));
 
         return Inertia::render('users/Index', [
             'users' => $users,
+            'filters' => $filters->toArray(),
+            'roles' => UserFormOptions::for($request->user())['roles'],
+            'departments' => Department::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name']),
         ]);
     }
 

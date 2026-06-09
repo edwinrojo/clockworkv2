@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Event;
 use App\Services\Reports\AttendanceReportService;
+use App\Support\Admin\EventFormOptions;
+use App\Support\Admin\TableFilters;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -17,15 +19,24 @@ class ReportController extends Controller
     {
         $this->authorize('viewAny', Event::class);
 
-        $from = $request->string('from')->toString() ?: null;
-        $to = $request->string('to')->toString() ?: null;
+        $tableFilters = TableFilters::fromRequest($request, ['status']);
+        $from = $request->string('from')->toString() ?: now()->subDays(30)->format('Y-m-d');
+        $to = $request->string('to')->toString() ?: now()->format('Y-m-d');
 
         return Inertia::render('reports/Index', [
             'filters' => [
-                'from' => $from ?? now()->subDays(30)->format('Y-m-d'),
-                'to' => $to ?? now()->format('Y-m-d'),
+                'from' => $from,
+                'to' => $to,
+                ...$tableFilters->toArray(),
             ],
-            'events' => $this->reports->eventsInRange($from, $to),
+            'events' => $this->reports->paginatedEventsInRange(
+                $from,
+                $to,
+                $tableFilters->search,
+                $tableFilters->extraString('status'),
+                $tableFilters->perPage,
+            ),
+            'statuses' => EventFormOptions::all()['statuses'],
         ]);
     }
 

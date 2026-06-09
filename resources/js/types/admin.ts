@@ -1,3 +1,26 @@
+export type PaginationLink = {
+    url: string | null;
+    label: string;
+    active: boolean;
+};
+
+export type Paginated<T> = {
+    data: T[];
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    from: number | null;
+    to: number | null;
+    links: PaginationLink[];
+};
+
+export type TableFilters = {
+    search?: string | null;
+    per_page?: number;
+    [key: string]: string | number | null | undefined;
+};
+
 export type ResourceAbilities = {
     viewAny: boolean;
     create: boolean;

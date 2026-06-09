@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreEventRequest;
 use App\Http\Requests\UpdateEventRequest;
 use App\Models\Event;
+use App\Models\Venue;
 use App\Services\Event\EventScheduleService;
 use App\Support\Admin\EventFormOptions;
+use App\Support\Admin\TableFilters;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -20,16 +22,25 @@ class EventController extends Controller
     {
         $this->authorize('viewAny', Event::class);
 
+        $filters = TableFilters::fromRequest($request, ['status', 'venue_id']);
+
         $events = Event::query()
             ->with('venue:id,name')
             ->with('dates')
             ->withCount(['sessions', 'attendances'])
+            ->when($filters->searchLike(), fn ($query, string $search) => $query->where('title', 'like', $search))
+            ->when($filters->extraString('status'), fn ($query, string $status) => $query->where('status', $status))
+            ->when($filters->extraString('venue_id'), fn ($query, string $venueId) => $query->where('venue_id', $venueId))
             ->orderByDesc('starts_at')
-            ->get()
-            ->map(fn (Event $event) => $this->eventPayload($event, $request));
+            ->paginate($filters->perPage)
+            ->withQueryString()
+            ->through(fn (Event $event) => $this->eventPayload($event, $request));
 
         return Inertia::render('events/Index', [
             'events' => $events,
+            'filters' => $filters->toArray(),
+            'statuses' => EventFormOptions::all()['statuses'],
+            'venues' => Venue::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 

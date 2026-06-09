@@ -8,6 +8,8 @@ use App\Models\Department;
 use App\Models\Event;
 use App\Services\Attendance\ExpectedRosterService;
 use Carbon\Carbon;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class AttendanceReportService
@@ -19,16 +21,46 @@ class AttendanceReportService
      */
     public function eventsInRange(?string $from = null, ?string $to = null): Collection
     {
+        return $this->eventsInRangeQuery($from, $to, null)
+            ->get()
+            ->map(fn (Event $event) => $this->eventSummaryRow($event));
+    }
+
+    /**
+     * @return LengthAwarePaginator<int, array<string, mixed>>
+     */
+    public function paginatedEventsInRange(
+        ?string $from,
+        ?string $to,
+        ?string $search,
+        ?string $status,
+        int $perPage,
+    ): LengthAwarePaginator {
+        return $this->eventsInRangeQuery($from, $to, $search, $status)
+            ->paginate($perPage)
+            ->through(fn (Event $event) => $this->eventSummaryRow($event));
+    }
+
+    /**
+     * @return Builder<Event>
+     */
+    public function eventsInRangeQuery(
+        ?string $from,
+        ?string $to,
+        ?string $search,
+        ?string $status = null,
+    ): Builder {
         $fromDate = $from ? Carbon::parse($from)->startOfDay() : now()->subDays(30)->startOfDay();
         $toDate = $to ? Carbon::parse($to)->endOfDay() : now()->endOfDay();
+        $searchLike = $search !== null && $search !== '' ? '%'.$search.'%' : null;
 
         return Event::query()
             ->with('venue:id,name')
             ->withCount('attendances')
             ->whereBetween('starts_at', [$fromDate, $toDate])
-            ->orderByDesc('starts_at')
-            ->get()
-            ->map(fn (Event $event) => $this->eventSummaryRow($event));
+            ->when($searchLike !== null, fn (Builder $query) => $query->where('title', 'like', $searchLike))
+            ->when($status !== null, fn (Builder $query) => $query->where('status', $status))
+            ->orderByDesc('starts_at');
     }
 
     /**

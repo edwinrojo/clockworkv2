@@ -4,18 +4,23 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import EventDisplayPinController from '@/actions/App/Http/Controllers/EventDisplayPinController';
 import EventSessionController from '@/actions/App/Http/Controllers/EventSessionController';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import AdminPagination from '@/components/admin/AdminPagination.vue';
 import AdminTable from '@/components/admin/AdminTable.vue';
+import AdminTableFilters from '@/components/admin/AdminTableFilters.vue';
 import EventStatusBadge from '@/components/admin/EventStatusBadge.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { attendances, edit, index, live } from '@/routes/events';
+import { confirm } from '@/lib/confirm';
 import { edit as rosterEdit } from '@/routes/events/roster';
 import type {
     EventLiveAttendance,
     EventLiveSession,
     EventTodaySchedule,
+    Paginated,
+    TableFilters,
 } from '@/types/admin';
 
 type LiveEvent = {
@@ -63,9 +68,9 @@ const props = defineProps<{
     qr: QrPreview | null;
     recentAttendances: EventLiveAttendance[];
     rosterStats: RosterStats;
-    missingEmployees: MissingEmployee[];
+    missingEmployees: Paginated<MissingEmployee>;
     departments: DepartmentOption[];
-    filters: { department_id: string | null };
+    filters: TableFilters;
     todaySchedule: EventTodaySchedule | null;
     manualStartAvailable: boolean;
     can: {
@@ -117,20 +122,16 @@ function reloadLive(): void {
     });
 }
 
-function filterByDepartment(departmentId: string): void {
-    router.get(
-        live.url(props.event.id, {
-            query: {
-                department_id: departmentId === '' ? undefined : departmentId,
-            },
-        }),
-        {},
-        { preserveState: true, preserveScroll: true },
-    );
-}
+async function endSession(): Promise<void> {
+    const confirmed = await confirm({
+        title: 'End check-in session?',
+        description:
+            'Employees will no longer be able to check in until a new session is started.',
+        confirmLabel: 'End session',
+        variant: 'warning',
+    });
 
-function endSession(): void {
-    if (!confirm('End this check-in session?')) {
+    if (!confirmed) {
         return;
     }
 
@@ -437,35 +438,34 @@ onUnmounted(() => {
             </AdminTable>
         </div>
 
-        <AdminTable
-            :title="`Missing employees (${missingEmployees.length})`"
+        <AdminTableFilters
+            :action="live(event.id)"
+            :filters="filters"
+            search-placeholder="Employee name or #"
         >
-            <template #toolbar>
-                <div class="flex items-center gap-2">
-                    <Label for="department_filter" class="sr-only">
-                        Department
-                    </Label>
-                    <select
-                        id="department_filter"
-                        class="flex h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm"
-                        :value="filters.department_id ?? ''"
-                        @change="
-                            filterByDepartment(
-                                ($event.target as HTMLSelectElement).value,
-                            )
-                        "
+            <div class="grid gap-2">
+                <Label for="department_id">Department</Label>
+                <select
+                    id="department_id"
+                    name="department_id"
+                    class="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                >
+                    <option value="">All departments</option>
+                    <option
+                        v-for="dept in departments"
+                        :key="dept.id"
+                        :value="dept.id"
+                        :selected="filters.department_id === dept.id"
                     >
-                        <option value="">All departments</option>
-                        <option
-                            v-for="dept in departments"
-                            :key="dept.id"
-                            :value="dept.id"
-                        >
-                            {{ dept.name }}
-                        </option>
-                    </select>
-                </div>
-            </template>
+                        {{ dept.name }}
+                    </option>
+                </select>
+            </div>
+        </AdminTableFilters>
+
+        <AdminTable
+            :title="`Missing employees (${missingEmployees.total})`"
+        >
             <thead>
                 <tr>
                     <th>Employee</th>
@@ -474,7 +474,7 @@ onUnmounted(() => {
             </thead>
             <tbody>
                 <tr
-                    v-for="employee in missingEmployees"
+                    v-for="employee in missingEmployees.data"
                     :key="employee.id"
                 >
                     <td>
@@ -487,12 +487,15 @@ onUnmounted(() => {
                         {{ employee.department_name ?? '—' }}
                     </td>
                 </tr>
-                <tr v-if="missingEmployees.length === 0">
+                <tr v-if="missingEmployees.data.length === 0">
                     <td colspan="2" class="py-10 text-center text-muted-foreground">
                         Everyone expected has checked in.
                     </td>
                 </tr>
             </tbody>
+            <template #footer>
+                <AdminPagination :paginator="missingEmployees" />
+            </template>
         </AdminTable>
     </div>
 </template>

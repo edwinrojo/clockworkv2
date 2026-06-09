@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreDepartmentRequest;
 use App\Http\Requests\UpdateDepartmentRequest;
 use App\Models\Department;
+use App\Support\Admin\TableFilters;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,15 +17,29 @@ class DepartmentController extends Controller
     {
         $this->authorize('viewAny', Department::class);
 
+        $filters = TableFilters::fromRequest($request, ['is_active']);
+
         $departments = Department::query()
             ->with('parent:id,name')
             ->withCount(['users', 'children'])
+            ->when($filters->searchLike(), function ($query, string $search): void {
+                $query->where(function ($query) use ($search): void {
+                    $query->where('name', 'like', $search)
+                        ->orWhere('code', 'like', $search);
+                });
+            })
+            ->when(
+                $filters->extraString('is_active') !== null,
+                fn ($query) => $query->where('is_active', $filters->extraString('is_active') === '1'),
+            )
             ->orderBy('name')
-            ->get()
-            ->map(fn (Department $department) => $this->departmentPayload($department, $request));
+            ->paginate($filters->perPage)
+            ->withQueryString()
+            ->through(fn (Department $department) => $this->departmentPayload($department, $request));
 
         return Inertia::render('departments/Index', [
             'departments' => $departments,
+            'filters' => $filters->toArray(),
         ]);
     }
 

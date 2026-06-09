@@ -8,6 +8,7 @@ use App\Enums\UserRole;
 use App\Models\Attendance;
 use App\Models\Event;
 use App\Models\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -18,23 +19,66 @@ class ExpectedRosterService
      */
     public function missingEmployees(Event $event, ?string $departmentId = null): Collection
     {
+        return $this->missingEmployeesQuery($event, $departmentId, null)
+            ->get()
+            ->map(fn (User $user) => $this->missingEmployeeRow($user));
+    }
+
+    /**
+     * @return LengthAwarePaginator<int, array{id: string, name: string, employee_number: string|null, department_name: string|null}>
+     */
+    public function paginatedMissingEmployees(
+        Event $event,
+        ?string $departmentId,
+        ?string $search,
+        int $perPage,
+    ): LengthAwarePaginator {
+        return $this->missingEmployeesQuery($event, $departmentId, $search)
+            ->paginate($perPage)
+            ->withQueryString()
+            ->through(fn (User $user) => $this->missingEmployeeRow($user));
+    }
+
+    /**
+     * @return Builder<User>
+     */
+    public function missingEmployeesQuery(
+        Event $event,
+        ?string $departmentId = null,
+        ?string $search = null,
+    ): Builder {
         $checkedInUserIds = Attendance::query()
             ->where('event_id', $event->id)
             ->pluck('user_id');
 
+        $searchLike = $search !== null && $search !== '' ? '%'.$search.'%' : null;
+
         return $this->expectedEmployeesQuery($event)
             ->when($departmentId !== null, fn (Builder $query) => $query->where('department_id', $departmentId))
+            ->when($searchLike !== null, function (Builder $query) use ($searchLike): void {
+                $query->where(function (Builder $query) use ($searchLike): void {
+                    $query->where('employee_number', 'like', $searchLike)
+                        ->orWhere('first_name', 'like', $searchLike)
+                        ->orWhere('last_name', 'like', $searchLike);
+                });
+            })
             ->whereNotIn('id', $checkedInUserIds)
             ->with('department:id,name')
             ->orderBy('last_name')
-            ->orderBy('first_name')
-            ->get()
-            ->map(fn (User $user) => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'employee_number' => $user->employee_number,
-                'department_name' => $user->department?->name,
-            ]);
+            ->orderBy('first_name');
+    }
+
+    /**
+     * @return array{id: string, name: string, employee_number: string|null, department_name: string|null}
+     */
+    private function missingEmployeeRow(User $user): array
+    {
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'employee_number' => $user->employee_number,
+            'department_name' => $user->department?->name,
+        ];
     }
 
     /**

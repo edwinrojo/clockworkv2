@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Support\Admin\TableFilters;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -13,24 +14,24 @@ class ActivityLogController extends Controller
     {
         $this->authorize('viewAny', ActivityLog::class);
 
-        $action = $request->string('action')->toString() ?: null;
-        $search = $request->string('search')->toString() ?: null;
+        $filters = TableFilters::fromRequest($request, ['action']);
+        $action = $filters->extraString('action');
 
         $logs = ActivityLog::query()
             ->with('user:id,first_name,middle_name,last_name,suffix,email')
             ->when($action !== null, fn ($query) => $query->where('action', $action))
-            ->when($search !== null, function ($query) use ($search): void {
+            ->when($filters->searchLike(), function ($query, string $search): void {
                 $query->where(function ($query) use ($search): void {
-                    $query->where('action', 'like', "%{$search}%")
+                    $query->where('action', 'like', $search)
                         ->orWhereHas('user', function ($query) use ($search): void {
-                            $query->where('email', 'like', "%{$search}%")
-                                ->orWhere('first_name', 'like', "%{$search}%")
-                                ->orWhere('last_name', 'like', "%{$search}%");
+                            $query->where('email', 'like', $search)
+                                ->orWhere('first_name', 'like', $search)
+                                ->orWhere('last_name', 'like', $search);
                         });
                 });
             })
             ->orderByDesc('created_at')
-            ->paginate(25)
+            ->paginate($filters->perPage)
             ->withQueryString()
             ->through(fn (ActivityLog $log) => [
                 'id' => $log->id,
@@ -51,10 +52,7 @@ class ActivityLogController extends Controller
 
         return Inertia::render('audit/Index', [
             'logs' => $logs,
-            'filters' => [
-                'action' => $action,
-                'search' => $search,
-            ],
+            'filters' => $filters->toArray(),
             'actions' => $actions,
         ]);
     }

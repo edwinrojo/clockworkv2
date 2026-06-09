@@ -10,6 +10,7 @@ use App\Services\Attendance\ExpectedRosterService;
 use App\Services\Event\EventScheduleService;
 use App\Services\Event\EventSessionService;
 use App\Services\Qr\QrTokenService;
+use App\Support\Admin\TableFilters;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -30,7 +31,8 @@ class EventLiveController extends Controller
         $event->load('venue:id,name');
         $event->loadCount('attendances');
 
-        $departmentId = $request->string('department_id')->toString() ?: null;
+        $filters = TableFilters::fromRequest($request, ['department_id']);
+        $departmentId = $filters->extraString('department_id');
 
         $todaySchedule = $this->scheduleService->scheduleForToday($event);
 
@@ -86,14 +88,17 @@ class EventLiveController extends Controller
             'qr' => $qrPreview,
             'recentAttendances' => $recentAttendances,
             'rosterStats' => $this->rosterService->counts($event, $departmentId),
-            'missingEmployees' => $this->rosterService->missingEmployees($event, $departmentId),
+            'missingEmployees' => $this->rosterService->paginatedMissingEmployees(
+                $event,
+                $departmentId,
+                $filters->search,
+                $filters->perPage,
+            ),
             'departments' => Department::query()
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get(['id', 'name']),
-            'filters' => [
-                'department_id' => $departmentId,
-            ],
+            'filters' => $filters->toArray(),
             'todaySchedule' => $todaySchedule ? [
                 'event_date' => $todaySchedule->event_date->format('Y-m-d'),
                 'check_in_time' => substr((string) $todaySchedule->check_in_time, 0, 5),

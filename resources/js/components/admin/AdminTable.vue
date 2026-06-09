@@ -35,5 +35,11 @@ const props = defineProps<Props>();
                 <slot />
             </table>
         </div>
+        <div
+            v-if="$slots.footer"
+            class="border-t border-border/15 px-5 py-4"
+        >
+            <slot name="footer" />
+        </div>
     </div>
 </template>

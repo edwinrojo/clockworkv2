@@ -191,7 +191,7 @@
     }
 
     .admin-alert {
-        @apply flex flex-col gap-4 rounded-xl border border-border/70 border-l-4 border-l-primary bg-card p-4 sm:flex-row sm:items-center sm:justify-between;
+        @apply flex flex-col gap-4 rounded-xl border border-l-4 border-border/70 border-l-primary bg-card p-4 sm:flex-row sm:items-center sm:justify-between;
         box-shadow: var(--elevation-card);
     }
 
@@ -223,7 +223,6 @@
     --brand: #70002a;
     --brand-foreground: #ffffff;
     --brand-muted: #f9eef2;
-
     --background: hsl(0 0% 99%);
     --foreground: hsl(337 20% 12%);
     --card: hsl(0 0% 100%);

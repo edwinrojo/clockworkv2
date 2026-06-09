@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
+import { Form, Head, router } from '@inertiajs/vue3';
 import DeviceChangeRequestController from '@/actions/App/Http/Controllers/DeviceChangeRequestController';
 import UserController from '@/actions/App/Http/Controllers/UserController';
 import AdminFormSection from '@/components/admin/AdminFormSection.vue';
@@ -7,9 +7,42 @@ import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import UserForm from '@/components/users/UserForm.vue';
 import { Button } from '@/components/ui/button';
 import { index } from '@/routes/users';
+import { confirm } from '@/lib/confirm';
 import type { UserEditPageProps } from '@/types/admin';
 
 const { managedUser, departments, roles } = defineProps<UserEditPageProps>();
+
+async function unlinkDevice(): Promise<void> {
+    const confirmed = await confirm({
+        title: 'Unlink registered device?',
+        description:
+            'The employee will need to register their phone again before they can check in on mobile.',
+        confirmLabel: 'Unlink device',
+        variant: 'warning',
+    });
+
+    if (!confirmed) {
+        return;
+    }
+
+    router.post(UserController.unlinkDevice.url(managedUser.id));
+}
+
+async function revokeMobileSessions(): Promise<void> {
+    const confirmed = await confirm({
+        title: 'Revoke mobile sessions?',
+        description:
+            'This signs the employee out of the Flutter app on all devices. They must sign in again.',
+        confirmLabel: 'Revoke sessions',
+        variant: 'warning',
+    });
+
+    if (!confirmed) {
+        return;
+    }
+
+    router.post(UserController.revokeTokens.url(managedUser.id));
+}
 
 defineOptions({
     layout: {
@@ -249,21 +282,15 @@ defineOptions({
             </div>
 
             <div class="flex flex-wrap gap-3">
-                <Form
+                <Button
                     v-if="managedUser.can.unlinkDevice"
-                    :action="UserController.unlinkDevice.url(managedUser.id)"
-                    method="post"
-                    v-slot="{ processing }"
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    @click="unlinkDevice"
                 >
-                    <Button
-                        type="submit"
-                        variant="outline"
-                        size="sm"
-                        :disabled="processing"
-                    >
-                        Unlink device
-                    </Button>
-                </Form>
+                    Unlink device
+                </Button>
             </div>
         </AdminFormSection>
 
@@ -272,20 +299,14 @@ defineOptions({
             title="Mobile sessions"
             description="Revoke all Sanctum tokens on the employee’s assigned device. They must sign in again in the Flutter app."
         >
-            <Form
-                :action="UserController.revokeTokens.url(managedUser.id)"
-                method="post"
-                v-slot="{ processing }"
+            <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                @click="revokeMobileSessions"
             >
-                <Button
-                    type="submit"
-                    variant="outline"
-                    size="sm"
-                    :disabled="processing"
-                >
-                    Revoke mobile sessions
-                </Button>
-            </Form>
+                Revoke mobile sessions
+            </Button>
         </AdminFormSection>
             </aside>
         </div>
